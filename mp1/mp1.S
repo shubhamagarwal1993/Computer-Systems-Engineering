@@ -80,17 +80,21 @@ mp1_rtc_tasklet:
 	movl 4(%ebp), %ecx		#save arg1 to ecx
 
 	pushl %eax			#saving registers
+	pushl %ebx
 	pushl %ecx			#saving registers
 	pushl %edx 			
 	pushl %edi			#saving registers
 	pushl %esi			#saving registers
 #	call update_missiles		#function call
-#	addl $4, %esp			#save argument
+	popl %esi
+	popl %edi
 	popl %edx
 	popl %ecx			#save return value
+	popl %ebx
 	popl %eax			#save return value
 	
 	pushl %eax			#saving registers
+	pushl %ebx
 	pushl %ecx			#saving registers
 	pushl %edx
 	pushl %edi			#saving registers
@@ -100,18 +104,21 @@ mp1_rtc_tasklet:
 	popl %edi
 	popl %edx
 	popl %ecx			#save return value
+	popl %ebx
 	popl %eax			#save return value
 
 	pushl %eax			#saving registers
+	pushl %ebx
 	pushl %ecx			#saving registers
 	pushl %edx
-	push %edi			#saving registers
-	push %esi			#saving registers
+	pushl %edi			#saving registers
+	pushl %esi			#saving registers
 	call redraw_crosshairs		#function call
 	popl %esi
 	popl %edi
 	popl %edx
 	popl %ecx			#save return value
+	popl %ebx
 	popl %eax			#save return value
 	
 	popl %edi			#popping callee saved registers
@@ -131,7 +138,40 @@ mp1_rtc_tasklet:
 
 .globl mp1_ioctl
 mp1_ioctl:
-		ret
+	jump_table:
+	.long mp1_ioctl_startgame, mp1_ioctl_addmissile, mp1_ioctl_movexhairs, mp1_ioctl_getstatus, mp1_ioctl_endgame
+
+	movl 8(%esp), %ebx		#save 'cmd' in EBX
+	
+	cmpl $0, %ebx
+	jne addmissile
+	jmp *jump_table(,%ebx,4)
+	jmp end_jump_table
+addmissile:	
+	cmpl $1, %ebx
+	jne movexhairs
+	jmp *jump_table(,%ebx,4)
+	jmp end_jump_table
+movexhairs:
+	cmpl $2, %ebx
+	jne getstatus
+	jmp *jump_table(,%ebx,4)
+	jmp end_jump_table
+getstatus:
+	cmpl $3, %ebx
+	jne endgame
+	jmp *jump_table(,%ebx,4)
+	jmp end_jump_table
+endgame:
+ 	cmpl $4, %ebx
+	jne invalid_arg
+	jmp *jump_table(,%ebx,4)
+	jmp end_jump_table
+invalid_arg:
+	movl $-1, %eax
+
+end_jump_table: 
+	ret
 
 
 # ----------------- Functions private to this file -------------------
@@ -337,13 +377,46 @@ redraw_crosshairs:
 	ret
 
 mp1_ioctl_startgame:
+	#do we need to use ebp and esp
+	#initialize all the variables 
+	#offset = (160*12)+(2*40) = 2000
+#	xorl %ecx, %ecx
+#	addl $2000, %ebx
+	
+	movl $0x0, mp1_missile_list
+	movl $0x0, base_alive
+	movl $0x0, mp1_score
+
+	movl $40, crosshairs_x
+	movl $12, crosshairs_y
 		ret
 
 mp1_ioctl_addmissile:
 		ret
 
 mp1_ioctl_movexhairs:
-		ret
+##draw a blank in place of x and y
+##position the crosshairs	
+	movl 4(%esp), %ebx		#EBX contains arg
+	add %bx, crosshairs_x		#shift x coord of crosshairs
+
+	shrl $16, %ebx			#left shift to get y coords
+	add %bx, crosshairs_y		#shift y coord of crosshairs
+
+#draw the new crosshairs
+	xorl %eax, %eax
+	xorl %ebx, %ebx 	
+	movl crosshairs_x, %eax
+	movl crosshairs_y, %ebx
+	imull $2, %eax
+	imull $160, %ebx
+	addl %ebx, %eax
+
+	movb $43, %cl
+
+	call mp1_poke
+	
+	ret
 
 mp1_ioctl_getstatus:
 		ret
@@ -352,7 +425,7 @@ mp1_ioctl_endgame:
 		ret
 
 
-#####This is a helper function written by me #####
+####This is a helper function written by me #####
 mp1_missile_remove:
 /*
 	#erase missile from screen
