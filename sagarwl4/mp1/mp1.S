@@ -96,7 +96,8 @@ mp1_rtc_tasklet:
 	pushl %edi			#saving registers
 	pushl %esi			#saving registers
 	call redraw_bases		#function call	
-	addl $4, %esp			#save argument
+	popl %esi
+	popl %edi
 	popl %edx
 	popl %ecx			#save return value
 	popl %eax			#save return value
@@ -278,27 +279,35 @@ redraw_bases:
 	movl %esp, %ebp
 	
  	xorl %eax, %eax
-	xorl %ecx, %ecx
+	xorl %edi, %edi
 	xorl %esi, %esi
-	pushl %edx
 	xorl %edx, %edx
-#offset=(24*2*80)+(18*2)=3876
+	addl $3876,%edx
+	#offset=(24*2*80)+(18*2)=3876
 
+	movl $base_pic, %ebx
+next_base:
 shiftx:
-	movl $base_pic, %ebx	
-	addl %ecx, %ebx
 	movb (%ebx), %cl
 
 	movl %edx, %eax
 	
-	push %eax	
+	push %edx	
 	call mp1_poke
-	popl %eax	
-	addl $1, %ecx
+	popl %edx	
+	addl $1, %edi
 	addl $2, %edx
-	cmpl $4, %ecx
+	addl $1, %ebx
+	cmpl $5, %edi
 	jl shiftx
-	popl %edx
+	movl $base_pic, %ebx
+	addl $1, %esi
+	addl $32, %edx
+	xorl %edi,%edi
+	cmpl $3, %esi
+	jl next_base
+
+
 #	leal (%eax,%ecx,1), %eax
 #	movl %eax, %eax
 #	movb %eax, %ecx
@@ -333,6 +342,28 @@ shiftx:
 	ret
 
 redraw_crosshairs:
+/*
+	pushl %ebp
+	movl %esp, %ebp
+	
+	push %edi
+	push %esi
+	push %ebx
+
+	movb $43, %cl
+	movl crosshairs_x, %eax
+	movl crosshairs_y, %ebx
+	imull $2, %eax
+	imull $160, %ebx
+	addl %ebx, %eax
+
+	call mp1_poke
+
+	popl %ebx
+	popl %esi
+	popl %edi
+	popl %ebp
+*/
 		ret
 
 mp1_ioctl_startgame:
@@ -342,6 +373,7 @@ mp1_ioctl_addmissile:
 		ret
 
 mp1_ioctl_movexhairs:
+	
 		ret
 
 mp1_ioctl_getstatus:
