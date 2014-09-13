@@ -108,7 +108,8 @@ mp1_rtc_tasklet:
 	push %edi			#saving registers
 	push %esi			#saving registers
 	call redraw_crosshairs		#function call
-#	addl $4, %esp			#save argument
+	popl %esi
+	popl %edi
 	popl %edx
 	popl %ecx			#save return value
 	popl %eax			#save return value
@@ -307,42 +308,11 @@ shiftx:
 	cmpl $3, %esi
 	jl next_base
 
-
-#	leal (%eax,%ecx,1), %eax
-#	movl %eax, %eax
-#	movb %eax, %ecx
-#	cmpl $0, %esi
-#	jl temp_loop
-	
-#	call mp1_poke				#finds starting addr of vid
-
-#	jg loop1	  
-
-#	#offset=(24*2*80)+(38*2)=3916
-#	pushl %ebp
-#	movl %esp, %ebp
-#	movl $3916, %eax			#draw at (38,24) to (42,24)
-#	movb $42, %cl
-#	pushl %edx				#caller saved so we push it
-#	call mp1_poke				#finds starting addr of vid
-#	popl %edx				#pop after function call
-#	popl %ebp
-
-#	#offset=(24*2*80)+(58*2)=3956
-#	pushl %ebp
-#	movl %esp, %ebp
-#	movl $3956, %eax			#draw at (58,24) to (62,24)
-#	movb $42, %cl
-#	pushl %edx				#caller saved so we push it
-#	call mp1_poke				#finds starting addr of vid
-#	popl %edx				#pop after function call
-#	popl %ebp
-	
 	popl %ebp
 	ret
 
 redraw_crosshairs:
-/*
+
 	pushl %ebp
 	movl %esp, %ebp
 	
@@ -363,8 +333,8 @@ redraw_crosshairs:
 	popl %esi
 	popl %edi
 	popl %ebp
-*/
-		ret
+
+	ret
 
 mp1_ioctl_startgame:
 		ret
@@ -373,7 +343,6 @@ mp1_ioctl_addmissile:
 		ret
 
 mp1_ioctl_movexhairs:
-	
 		ret
 
 mp1_ioctl_getstatus:
