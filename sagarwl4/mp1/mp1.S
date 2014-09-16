@@ -19,7 +19,10 @@
     # Character to draw for an explosion - '@'
 
 	EXPLOSION = 64
-
+	UPPER_X_LIMIT = 79
+	UPPER_Y_LIMIT = 24
+	LOWER_X_LIMIT = 0
+	LOWER_Y_LIMIT = 0
 
 # Data shared between this file and rtc.c helper functions
 
@@ -73,44 +76,54 @@ mp1_rtc_tasklet:
 
 		#movl mp1_missile_list,%edx
 
-		pushl %ebp				#base pointer
+		pushl %ebp				#set up base pointer
 		movl %esp, %ebp			#stack pointer to base pointer
 		
-		#callee saves
-		push %edi
-		push %esi
-		push %ebx
+		
+		pushl %edi 				#callee saved registers 
+		pushl %esi 				#callee saved registers
+		pushl %ebx 				#callee saved registers
 
 		pushl %eax				#saving registers
 		pushl %ecx				#saving registers
-		pushl %edx 			
+		pushl %edx 				#saving registers
 		pushl %edi				#saving registers
 		pushl %esi				#saving registers
 		call update_missiles
-	#	addl $4, %esp			#save argument
-		popl %esi
-		popl %edi
-		popl %edx
-		popl %ecx				#save return value
-		popl %eax
+		popl %esi 				#get back value
+		popl %edi 				#get back value
+		popl %edx 				#get back value
+		popl %ecx				#get back value
+		popl %eax  				#get back value
 
 		pushl %eax				#saving registers
 		pushl %ecx				#saving registers
-		pushl %edx 			
+		pushl %edx 			 	#saving registers
 		pushl %edi				#saving registers
 		pushl %esi				#saving registers
-		call redraw_cities
-	#	addl $4, %esp			#save argument
-		popl %esi
-		popl %edi
-		popl %edx
-		popl %ecx				#save return value
-		popl %eax
+		call update_bases
+		popl %esi 				#get back value
+		popl %edi 				#get back value
+		popl %edx 				#get back value
+		popl %ecx				#get back value
+		popl %eax 				#get back value
 
-		#complete callee saves	
-		popl %ebx
-		popl %esi
-		popl %edi
+		pushl %eax				#saving registers
+		pushl %ecx				#saving registers
+		pushl %edx 				#saving registers
+		pushl %edi				#saving registers
+		pushl %esi				#saving registers
+#		call update_crosshairs 	#has been include below
+		popl %esi 				#get back value
+		popl %edi 				#get back value
+		popl %edx 				#get back value
+		popl %ecx				#get back value
+		popl %eax  				#get back value
+
+
+		popl %ebx 				#get back callee saved value
+		popl %esi 				#get back callee saved value
+		popl %edi 				#get back callee saved value
 		leave
 		ret
 
@@ -126,93 +139,94 @@ mp1_rtc_tasklet:
 
 .globl mp1_ioctl
 
-		jump_table:
+		jump_table: 			#declaring a jump table
 		.long mp1_ioctl_startgame, mp1_ioctl_addmissile, mp1_ioctl_movexhairs, mp1_ioctl_getstatus, mp1_ioctl_endgame
 mp1_ioctl:
 
+		movl 8(%esp), %ebx			#save argument to ebx 		
 
+		jmp *jump_table(,%ebx,4)	#setting up switch case 	
 
-
-		movl 8(%esp), %ebx		#save 'cmd' in EBX
-
-		jmp *jump_table(,%ebx,4)		
-
-		cmpl $0, %ebx
+		cmpl $0, %ebx 				#if less than 0
 		jl finish
-		cmpl $4,%ebx
+		cmpl $4,%ebx 				#if greater then 4
 		jg finish
-		jmp *jump_table(,%ebx,4)
+		jmp *jump_table(,%ebx,4) 	#go to the case 	
 
 		finish:
-		movl $-1, %eax
+		movl $-1, %eax 				#ret -1 if invalid
 		ret
 
 # ----------------- Functions private to this file -------------------
 
 update_missiles:
-		pushl %ebp
-		movl %esp, %ebp
+		pushl %ebp 					#base pointer
+		movl %esp, %ebp 			#stack pointer
 
-		cmpl $0, mp1_missile_list
-		je exit_update
+#WE HAVE TO CHECK FOR NULL INITIALLY 
+		cmpl $0, mp1_missile_list 	#if null then leave
+		je end_of_update			#go to end of update_missiles			
 		
 		movl mp1_missile_list, %edx	#save pointer address	
-		pushl %edx
-		start_loop:
+		pushl %edx 					
+
+		update_missiles_loop_start:
 		popl %edx
 		cmpl $0, %edx
-		je exit_update
+		je end_of_update
 
 		cmpl $0, EXPLODED(%edx)		#check if exploded
-		je UPDATE_COORDINATES	#not exploded goto label
+		je UPDATE_COORDINATES		#not exploded goto label
 	
-		#####EXPLODES THEN DO THE FOLLOWING:	
-		#STOP moving
-		#check for neighborhood explosion
-		#draw explosion character
-		#decrememnt exploded fld and when reach 0 rmv from list
-		#free struct missile   
+		
+				#####EXPLODES THEN DO THE FOLLOWING:	
+				#STOP moving
+				#check for neighborhood explosion
+				#draw explosion character
+				#decrememnt exploded fld and when reach 0 rmv from list
+				#free struct missile   
 	
+		
 		movl $0, VX(%edx)		#make x velocity 0 
 		movl $0, VY(%edx)		#make y velocity 0
 	
-		#checking for neighborhood explosion
-		pushl %edx
-		pushl %edx
-		call missile_explode
-		addl $4,%esp
-		popl %edx
-		cmpl $0, %eax 
+						#checking for neighborhood explosion
+		pushl %edx 		#save pointer
+		pushl %edx 		#give arg
+		call missile_explode #
+		addl $4,%esp 	#move stack pointer
+		popl %edx 		#get back pointer
+		cmpl $0, %eax 	
 		je dont_notify 		#%eax = 0 no surround explosions
-		pushl %edx
-		pushl %edx
-		call mp1_notify_user
-		addl $4,%esp
-		popl %edx
+		pushl %edx 		#save pointer
+		pushl %edx 		#give arg
+		call mp1_notify_user #
+		addl $4,%esp 		#move stack pointer
+		popl %edx 			#get back pointer
 	
 	dont_notify:	
-		#popl %edx		
+							#popl %edx		
 		
 		decl EXPLODED(%edx)		#decrement this field 
 		cmpl $0, EXPLODED(%edx)	#check if 0 remove missile
-		je missile_remove 																					#changes made by shubham
-	#	jle missile_remove		#go to end of loop
+		je missile_remove 		#use equal as -ve vals are allowed																			
+	
 		jmp end_of_loop
 
-		movl X(%edx), %eax
-		movl Y(%edx), %ebx
-		sarl $16,%eax
-		sarl $16,%ebx 		
-		imull $2, %eax 		#X*2
-		imull $160, %ebx	#Y*160
-		addl %ebx, %eax
-		movb C(%edx), %cl
-		pushl %edx
-		pushl %edx
-		call mp1_poke
-		addl $4,%esp
-		popl %edx
-		jmp end_of_loop
+		movl X(%edx), %eax 		#save X coord
+		movl Y(%edx), %ebx 		#save Y coord
+		sarl $16,%eax 			#shift right 16 bits
+		sarl $16,%ebx 		 	#shift right 16 bits
+		imull $2, %eax 			#X*2 for 2 bytes each
+		imull $160, %ebx		#Y*2*80 for 2 bytes each
+		addl %ebx, %eax 		#put final offset in eax
+		movb C(%edx), %cl 		#put char in cl to print
+		pushl %edx 				#save pointer
+		pushl %edx  			#give arg
+		call mp1_poke 			#print to screen
+		addl $4,%esp 			#reposition pointer
+		popl %edx 				#get back pointer
+		jmp end_of_loop 		#leave from here	
 
 	UPDATE_COORDINATES:	###if not exploding then do tasks
 		#1)missile out of screen then erase missile from screen and
@@ -227,23 +241,23 @@ update_missiles:
 		sarl $16,%ebx
 
 		cmpl $79, X(%edx)		#if x > 79  
-		jl missile_remove
+		jl missile_remove 		#invalid coord 
 		cmpl $0, X(%edx)		#if x < 0
-		jl missile_remove
+		jl missile_remove 		#invalid coord
 		cmpl $24, Y(%edx)		#if y > 24
-		jl missile_remove
+		jl missile_remove 		#invalid coord
 		cmpl $0, Y(%edx)		#if y < 0
-		jl missile_remove
+		jl missile_remove 		#invalid coord
 
-		imull $2, %eax
-		imull $160, %ebx	
-		addl %ebx, %eax
-		movb C(%edx), %cl
-		pushl %edx
-		pushl %edx
-		call mp1_poke
-		addl $4,%esp
-		popl %edx
+		imull $2, %eax 		 	#X*2 for 2 bytes each
+		imull $160, %ebx		#Y*2*80 for 2 bytes each
+		addl %ebx, %eax 		#put final offset in eax
+		movb C(%edx), %cl  		#put char in cl to print
+		pushl %edx 				#save pointer
+		pushl %edx 				#give arg
+		call mp1_poke 			#print on screen
+		addl $4,%esp 			#reposition stack pointer
+		popl %edx 				#get back pointer
 		
 		#1. Erase the variable
 		#2. Call rmv_missile
@@ -253,38 +267,40 @@ update_missiles:
 START_TASK2:
 	   #Task 2 
 		#CASE 2
-		# If X == DEST_X and Y==DEST_Y, then call missile_exploded
-		movl X(%edx), %ebx			# If DEST_X == X
-		sarl $16, %ebx
-		cmpl %ebx, DEST_X(%edx)
-		jne exploding	#<-
+		# If X == DEST_X and Y==DEST_Y
+		#then call missile_exploded
 		
-		movl Y(%edx), %ebx
-		sarl $16, %ebx
-		cmpl %ebx, DEST_Y(%edx)	# If DEST_Y = Y
-		jne exploding	#<-
+		movl X(%edx), %ebx		#save x coord in temp register
+		sarl $16, %ebx 			#shift by 16 bits	
+		cmpl %ebx, DEST_X(%edx) #If reached destination
+		jne exploding			#go to label
 		
-#		pushl %eax
-#		pushl %ecx
-		pushl %edx
-		pushl %edx
-		call missile_explode
-		addl $4,%esp
-		popl %edx
+		movl Y(%edx), %ebx 		#save y coord in temp register
+		sarl $16, %ebx 			#shift by 16 bits
+		cmpl %ebx, DEST_Y(%edx)	#If reached destination
+		jne exploding			#go to label
+		
+			#		pushl %eax
+			#		pushl %ecx
+		pushl %edx 				#save pointer
+		pushl %edx 				#give arg
+		call missile_explode 	#
+		addl $4,%esp 			#reposition stack pointer
+		popl %edx 				#get back pointer
 
 		
-		cmpl $0, %eax
-		je exploding
+		cmpl $0, %eax 			#
+		je exploding 			#
 
-		pushl %eax
-		pushl %ecx
-		pushl %edx
-		pushl %edx
+		pushl %eax 				#caller saved registers
+		pushl %ecx 				#caller saved registers
+		pushl %edx 				#caller saved registers
+		pushl %edx 				#caller saved registers
 		call mp1_notify_user
-		addl $4,%esp
-		popl %edx
-		popl %ecx
-		popl %eax
+		addl $4,%esp 			#caller saved registers
+		popl %edx 				#caller saved registers
+		popl %ecx 				#caller saved registers
+		popl %eax 				#caller saved registers
 
 exploding:
 		movl EXPLODED(%edx),%ebx
@@ -301,19 +317,19 @@ exploding:
 skip2:	
 		#draw the EXPLOSION character
 
-		movl X(%edx), %eax
-		movl Y(%edx), %ebx
-		sarl $16,%eax
-		sarl $16,%ebx 		
-		imull $2, %eax 		#X*2
-		imull $160, %ebx	#Y*160
-		addl %ebx, %eax
-		movb $64, %cl
-		pushl %edx
-		#pushl %edx
-		call mp1_poke
-		#addl $4,%esp
-		popl %edx
+		movl X(%edx), %eax 		#store coord in temp registers
+		movl Y(%edx), %ebx 		#store coord in temp registers
+		sarl $16,%eax 			#shift right by 16 bits
+		sarl $16,%ebx 		 	#shift right by 16 bits
+		imull $2, %eax 			#X*2 for 2 bits each
+		imull $160, %ebx		#Y*2*80 for 2 bits each
+		addl %ebx, %eax 		#store offset in eax
+		movb $64, %cl 			#store explosion character in cl
+		pushl %edx 				#save pointer
+		#pushl %edx 			#
+		call mp1_poke 			#draw on screen
+		#addl $4,%esp 
+		popl %edx 				#get back pointer
 		jmp end_of_loop
 		
 	
@@ -369,89 +385,82 @@ START_TASK3:
 		end_of_loop:
 		movl %edx,%edi
 		cmpl $0, %edx
-		je exit_update
+		je end_of_update
 
 		movl NEXT(%edx),%esi
 		cmpl $0,%esi
-		je exit_update
+		je end_of_update
 		movl %esi,%edx
 		pushl %edx
 		xorl %esi,%esi
-		jmp start_loop
+		jmp update_missiles_loop_start
 
-		exit_update:
+		end_of_update:
 		leave
 		ret
 
 
 
-redraw_cities:
-		#offset 1 = 2928 -> 3568
-		#offset 2 = 6128 -> 6768
-		#offset 3 = 9328 -> 9968
-
-		pushl %ebp
-		movl %esp, %ebp
+update_bases:
+		#offset = (24*2*80)+(18*2)=3876
 		
-	 	pushl %edi
-	 	pushl %esi
-	 	pushl %ebx
+		pushl %ebp 				#base pointer
+		movl %esp, %ebp 		#stack pointer
+		
+	 	pushl %edi 				#callee saved registers
+	 	pushl %esi 				#callee saved registers
+	 	pushl %ebx 				#callee saved registers
 
-	 	xorl %eax, %eax
-		xorl %edi, %edi
-		xorl %esi, %esi
-		xorl %edx, %edx
-		addl $3876,%eax
-		#offset=(24*2*80)+(18*2)=3876
+	 	xorl %eax, %eax 		#clear registers for counters
+		xorl %edi, %edi 		#clear registers for counters
+		xorl %esi, %esi 		#clear registers for counters
+		xorl %edx, %edx 		#clear registers for counters
+		addl $3876,%eax 		#eax will contain offset
 
-		movl $base_alive, %ebx
+		movl $base_alive, %ebx 	#start reading Array
 
-	next_base: #OUTER LOOP
+	outer_loop: #OUTER LOOP
 	shiftx:
-		cmpb $0, (%ebx)
+		cmpb $0, (%ebx) 		#check for dead base
 		je deadbase
 
-		cmpb $1, (%ebx)
+		cmpb $1, (%ebx) 		#check for alive base
 		je alivebase
-			
-		#movl %edx, %eax
 		
-		deadbase:
+	deadbase:
 		movl $dead_base_pic, %edx
-		#movb (%ecx), %cl
-		jmp start_base_loop
+		jmp inner_loop
 
-		alivebase:
+	alivebase:
 		movl $base_pic, %edx
-		#movb (%ecx), %cl
-		start_base_loop:  #INNER LOOP
+	
+	inner_loop:  #INNER LOOP
 
-		movb (%edx), %cl
+		movb (%edx), %cl 		#move display value in cl
 
-		pushl %edx
-		pushl %edx
-		call mp1_poke
-		addl $4,%esp
-		popl %edx	
+		pushl %edx 				#save pointer
+		pushl %edx 				#pass in as arg
+		call mp1_poke 			#draw on screen
+		addl $4,%esp 			#get back pointer
+		popl %edx				#get back pointer
 
-		addl $1, %edi
 		addl $2, %eax
+		addl $1, %edi 			
 		addl $1, %edx
 		cmpl $5, %edi
-		jl start_base_loop
+		jl inner_loop
 		addl $1, %ebx
 		#movl $base_pic, %ebx
-		addl $1, %esi
 		addl $32, %eax
+		addl $1, %esi
 		xorl %edi,%edi
 		cmpl $3, %esi
-		jl next_base
+		jl outer_loop
 
 		
-		popl %ebx
-		popl %esi
-		popl %edi
-
+		popl %ebx 				#get back callee saved registers
+		popl %esi 				#get back callee saved registers
+		popl %edi 				#get back callee saved registers
 		leave
 		ret
 
@@ -483,10 +492,11 @@ redraw_cities:
 			#push %edi
 			
 			cmpl $0, %edx
-#			jle exit_update 					###should be equal to 0
-			je exit_update																							#changes made by shubham
+#			jle end_of_update					###should be equal to 0
+			je end_of_update					#keep equal to cos -ve address work																		
 
-		  	#Undrawing Missile
+
+		  				#clearing the previous missile position
 			movl X(%edx), %eax
 			movl Y(%edx), %ebx
 			shrl $16, %eax
@@ -494,7 +504,7 @@ redraw_cities:
 			imull $2, %eax
 			imull $160, %ebx
 			addl %ebx, %eax
-			movb $32, %cl
+			movb $32, %cl 		#32 is ascii for blank
 			pushl %edx
 			pushl %edx
 			call mp1_poke
@@ -518,16 +528,16 @@ redraw_cities:
 		
 		#ret
 
-		#-----My Personal Helper Functions-----#
+		#-----Helper Functions-----#
 		mp1_missile_remove:
 			#TODO: REMOVE THE MISSILE
 			
-			pushl %ebp							
-			movl %esp, %ebp
+			pushl %ebp				#base pointer			
+			movl %esp, %ebp 		#stack pointer	
 
-			pushl %edi
-			pushl %esi
-		    pushl %ebx
+			pushl %edi 				#callee saved registers
+			pushl %esi 				#callee saved registers
+		    pushl %ebx  			#callee saved registers
 
 		    cmpl mp1_missile_list,%edx
 		    je head_case
@@ -582,9 +592,9 @@ mp1_ioctl_startgame:
 		movl $40, crosshairs_x
 		movl $12, crosshairs_y
 		
-		popl %ebx
-		popl %esi
-		popl %edi
+		popl %ebx 				#get back callee saved value 
+		popl %esi 				#get back callee saved value
+		popl %edi 				#get back callee saved value
 		leave
 		ret
 		
@@ -598,62 +608,59 @@ mp1_ioctl_addmissile:
 			returning. If it succeeds, it should add the new missile into the linked list and return 0.
 		*/
 		
-		pushl %ebp				#base pointer
-		movl %esp, %ebp			#stack pointer to base pointer
+		pushl %ebp					#base pointer
+		movl %esp, %ebp				#stack pointer to base pointer
 
-		movl 8(%esp), %esi			#esi gets *from arg
+		movl 8(%esp), %edi			#esi gets *from arg
 
-		push %esi 					#save esi
-		push %edi 					#save edi
-		push %ebx 					#save ebx
+		pushl %ebx 					#save ebx
+		pushl %edi 					#save edi
+		pushl %esi 					#save esi
 
 		#movl $33,%ebx
-		push %edx 					#save edx
+		pushl %edx 					#save edx
 		#push %ebx 					#push size of dynamic memory
-		push $33
-		call mp1_malloc				#assign dynamic memory 
-		popl %edx 					#temporarily store 33
-		xorl %edx,%edx 				#clear 33
+		pushl $33
+		call mp1_malloc				#assign memory 
+		addl $4,%esp 				#clear 33
 		popl %edx 					#retrieve original stack pointer
-		#now, eax is the 33bit space i created
 
-		push $33 					#push size of dynamic memory
-		push %esi 					#push *from arg
-		push %eax					#push *to arg
+		pushl $33 					#push size of dynamic memory
+		pushl %edi 					#push *from arg
+		pushl %eax					#push *to arg
 		#unsigned long mp1_copy_from_user(*to,*from,n)
 		call mp1_copy_from_user							#copy user missile struct 
 		#eax contains whether valid transfer
-		popl %edi 					#retrieve *to arg and store in edi
-		popl %esi 					#retrieve *from arg
+		popl %esi 					#retrieve *to arg and store in edi
+		popl %edi					#retrieve *from arg
 		popl %ebx 					#temporarily store 33
 		xorl %ebx,%ebx 				#clear 33
-		xorl %esi,%esi 				#clear esi (previously stored *from)
+		xorl %edi,%edi			#clear esi (previously stored *from)
 
 		cmpl $0,%eax				#check if copy was not valid
-		jg invalid
+		jne no_copy
 		
 		#valid
 		movl mp1_missile_list,%ebx
-		movl %ebx,NEXT(%edi)
-		movl %edi,mp1_missile_list
-		#movl %edi,%edx
+		movl %ebx,NEXT(%esi)
+		movl %esi,mp1_missile_list
+		#movl %esi,%edx
 
-		jmp fin 					#jump to end
+		jmp done_adding 					#jump to end
 
-		invalid:
+		no_copy:
 		#xorl %edi,%edi
-		push %edi 					#pass address of new dynamic space
+		pushl %esi 					#pass address of new dynamic space
 		call mp1_free				#free the current cell 
 		addl $4,%esp
-		#pop %edi 					#pop address arg
 		addl $-1,%eax 				#put -1 in eax to return
-		jmp fin 					#jump to end
+		jmp done_adding				#jump to end
 
-		fin:
+		done_adding:
 		#PRECAUTION: complete callee saves
-		popl %ebx
-		popl %edi
 		popl %esi
+		popl %edi
+		popl %ebx
 
 		leave
 		ret
@@ -685,16 +692,16 @@ mp1_ioctl_movexhairs:
 	sarl $16, %ebx
 	
 	addw %bx, crosshairs_y
-	cmpw $0,crosshairs_x
+	cmpw $LOWER_X_LIMIT,crosshairs_x
 	jl X_LO
 	
-	cmpw $79,crosshairs_x
+	cmpw $UPPER_X_LIMIT,crosshairs_x
 	jg X_HI
 	
-	cmpw $0,crosshairs_y
+	cmpw $LOWER_Y_LIMIT,crosshairs_y
 	jl Y_LO
 	
-	cmpw $24,crosshairs_y
+	cmpw $UPPER_Y_LIMIT,crosshairs_y
 	jg Y_HI
 	
 	jmp draw_crosshairs
@@ -757,7 +764,7 @@ mp1_ioctl_getstatus:
 		shlb $1, %al
 		addl $1, %ecx
 		addb (%ecx), %al
-		shll $16, %eax
+		shll $17, %eax
 		
 		xorl %edx, %edx
 		movl mp1_score, %edx
