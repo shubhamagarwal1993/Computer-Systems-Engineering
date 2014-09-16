@@ -31,6 +31,9 @@ mp1_missile_list:	.long 0x0	# Head of list pointer
 base_alive:		.long 0x0	# Array of 3 bytes, plus a padding byte
 mp1_score:		.long 0x0	# Player's current score
 
+jump_table:
+.long mp1_ioctl_startgame, mp1_ioctl_addmissile, mp1_ioctl_movexhairs, mp1_ioctl_getstatus, mp1_ioctl_endgame
+
 
 # Data private to this  file
 
@@ -87,8 +90,6 @@ mp1_rtc_tasklet:
 
 .globl mp1_ioctl
 
-jump_table:
-.long mp1_ioctl_startgame, mp1_ioctl_addmissile,mp1_ioctl_movexhairs,mp1_ioctl_getstatus,mp1_ioctl_endgame
 
 mp1_ioctl:
 
