@@ -791,13 +791,15 @@ mp1_ioctl_endgame:
 		cmp $0,%edx 									
 		je end_endgame_loop
 	
-		movl %edx, %ebx
+		movl NEXT(%edx),%esi
+		push %ebx
+		push %edx
+		call mp1_missile_remove
+		addl $4,%esp
+		addl $4,%esp
+		movl %edx,%ebx
+		movl %esi,%edx
 
-		pushl %edx
-		call mp1_missile_remove 	
-		popl %edx
-		
-		movl NEXT(%edx),%edx
 		JMP start_endgame_loop
 	
 	end_endgame_loop:
@@ -806,3 +808,14 @@ mp1_ioctl_endgame:
 		popl %ebx
 		leave
 		ret
+
+
+
+
+	#	movl %edx, %ebx
+
+	#	pushl %edx
+	#	call mp1_missile_remove 	
+	#	popl %edx
+		
+	#	movl NEXT(%edx),%edx
