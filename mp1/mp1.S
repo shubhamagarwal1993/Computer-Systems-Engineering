@@ -795,11 +795,13 @@ mp1_ioctl_endgame:
 		cmp $0,%edx 									
 		je end_endgame_loop
 	
-		movl NEXT(%edx),%ebx 							 
-		pushl mp1_missile_list
-		call mp1_free 	
-		popl mp1_missile_list	
 		movl %edx, %ebx
+
+		pushl %edx
+		call mp1_free 	
+		popl %edx
+		
+		movl NEXT(%edx),%edx
 		JMP start_endgame_loop
 	
 	end_endgame_loop:
