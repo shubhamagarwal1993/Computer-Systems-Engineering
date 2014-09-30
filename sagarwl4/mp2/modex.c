@@ -83,6 +83,7 @@
 #define NUM_ATTR_REGS          22
 //////////////////////  MAGIC NUMBERS WRITTEN BY ME   ////////////////////////////////////////////////////////////////
 #define STATUS_BAR_OFFSET   0x05A0 
+#define STATUS_BAR_ADDR_OFFSET  1440 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 /* VGA register settings for mode X */
 static unsigned short mode_X_seq[NUM_SEQUENCER_REGS] = {
@@ -559,10 +560,10 @@ show_status_bar (unsigned char * buf)
 
   //text_to_graphics("HELLO", buf);
 
-  for (i = 0; i < 4; i++)                           //loop over through the planes
+  for (i = 0; i < 4; i++)                                     //loop over through the planes
   {
-    SET_WRITE_MASK (1 << (i + 8));                  //here the set_write_mask 
-    copy_image2 (buf + 1440*i, 0x0000);             //copy_image2 has the instruction for printing on the screen.
+    SET_WRITE_MASK (1 << (i + 8));                            //here the set_write_mask 
+    copy_image2 (buf + (STATUS_BAR_ADDR_OFFSET*i), 0x0000);   //copy_image2 has the instruction for printing on the screen.
   }    
 }
 
