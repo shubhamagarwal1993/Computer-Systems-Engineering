@@ -554,16 +554,16 @@ show_screen ()
 *     To print we make use of a function similar to copy_image
 */////
 void
-show_status_bar (unsigned char * buf)
+show_status_bar (unsigned char * buffer)
 {
   int i;
 
-  //text_to_graphics("HELLO", buf);
+  //text_to_graphics("HELLO", buffer);
 
   for (i = 0; i < 4; i++)                                     //loop over through the planes
   {
     SET_WRITE_MASK (1 << (i + 8));                            //here the set_write_mask 
-    copy_image2 (buf + (STATUS_BAR_ADDR_OFFSET*i), 0x0000);   //copy_image2 has the instruction for printing on the screen.
+    copy_image2 (buffer + (STATUS_BAR_ADDR_OFFSET*i), 0x0000);   //copy_image2 has the instruction for printing on the screen.
   }    
 }
 
