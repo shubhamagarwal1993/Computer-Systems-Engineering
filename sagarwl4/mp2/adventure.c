@@ -1,4 +1,4 @@
-/*									tab:8
+/*tab:8
  *
  * adventure.c - main source file for ECE391 adventure game (F11 MP2)
  *
@@ -248,25 +248,31 @@ game_loop ()
 	}
 
 	show_screen ();
+	//////////////////////////THIS HELPER FUNCTION WRITTEN BY ME////////////////////////////////////////////////////
+	/*
+	*	This function fills the buffer with the ascii of the string which is passes to us. 
+	* 	It then calls show status bar which draws or prints the characters on the screen.
+	*	We use world.c to get the string and an offset while calling text_to_graphics.	
+	*	We keep the function inside the locks for an interrupt might disturb the buffer.  
+	*/
 
-	//////////////////////////THIS HELPER FUNCTION WRITTEN BY ME//////////////
-	pthread_mutex_lock (&msg_lock);
-	unsigned char buf[5760];
-
-	if(status_msg[0] == '\0')
+	pthread_mutex_lock (&msg_lock);						//start the lock here to stop most interrupts 
+	unsigned char buf[5760];							//create a buffer. Size is given by 320(width) * 18(height)
+														//use this buffer to write font data
+	if(status_msg[0] == '\0')							//status_msg records the current status message.
+	{													//dont print when string is empty.			
+		text_to_graphics (room_name (game_info.where), buf, 0);		//here the offset 0 
+		text_to_graphics (get_typed_command(), buf, 1);		//here the offset 1		
+	}															
+	else												//take care of thg conditions.
 	{
-		text_to_graphics (room_name (game_info.where), buf, 0);
-		text_to_graphics (get_typed_command(), buf, 1);
-	}	
-	else
-	{
-		text_to_graphics (status_msg, buf, 2);
+		text_to_graphics (status_msg, buf, 2);			//here the offset 2				
 	}	
 
-	show_status_bar (buf);
+	show_status_bar (buf);											
 
-	pthread_mutex_unlock (&msg_lock);
-	//////////////////////////////////////////////////////////////////////////
+	pthread_mutex_unlock (&msg_lock);					//release the lock				
+	///////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 	/*
 	 * Wait for tick.  The tick defines the basic timing of our

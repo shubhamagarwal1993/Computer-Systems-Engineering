@@ -577,7 +577,7 @@ void text_to_graphics(const char * s1, unsigned char * buf, int set_offset)
     int length = 0;
     int offset = 0;
 
-    while(s1[length]!=0)
+    while(s1[length]!=0)                        //this calculates the length of the string
     {
         length++;
     }    
@@ -599,25 +599,25 @@ void text_to_graphics(const char * s1, unsigned char * buf, int set_offset)
         }
     }
 
-    for (k = 0; k < length; k++)
+    for (k = 0; k < length; k++)                                //loop to run over all the characters
     {
-        letter = s1[k];
-        for (i = 0; i < 16; i++)
+        letter = s1[k];                                         //get the ascii of each charcater    
+        for (i = 0; i < 16; i++)                                //loop over all the ascii in font_data
         {
-            mask = 0x80;
-            for (m = 0; m < 8; m++)
+            mask = 0x80;                                        //will use 80 as it segregates each bit using 1000 0000
+            for (m = 0; m < 8; m++)                             //loop over the length of the charater
             {
-                if ((mask & font_data[letter][i]) == mask)
+                if ((mask & font_data[letter][i]) == mask)      //check for this condition to pick up ascii from font_data
                 {
-                    for (j = 0; j < 4; j++)
+                    for (j = 0; j < 4; j++)                     //this loop over all the 4 planes  
                     {
-                        if(m<=3)
-                            buf[80 + (80*i) + 2*k + (m%4)*1440 + offset] = 0x15;
-                        else
-                            buf[80 + (80*i) + 2*k + (m%4)*1440 + 1 + offset] = 0x15;
+                        if(m<=3)                                //if the plane is 0,1,2,3 then this condition.
+                            buf[80 + (80*i) + 2*k + (m%4)*1440 + offset] = 0x15;    //just the color
+                        else                                    //if the plane is 4,5,6,7 then we have to take care of offset.    
+                            buf[80 + (80*i) + 2*k + (m%4)*1440 + 1 + offset] = 0x15;    //just the color
                     }
                 }
-                mask = (mask >> 1);
+                mask = (mask >> 1);                             //shift the mask to get the next bit
             }
         }
     }    

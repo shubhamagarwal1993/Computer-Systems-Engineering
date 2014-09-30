@@ -313,12 +313,13 @@ set_mode_X (void (*horiz_fill_fn) (int, int, unsigned char[SCROLL_X_DIM]),
         build[BUILD_BUF_SIZE + MEM_FENCE_WIDTH + i] = MEM_FENCE_MAGIC;
     }
 
+    ///////////////////////////////////////////////////////////////////////////////////////////////////////
     /* One display page goes at the start of video memory. */
     target_img = 0x05A0;
 
     //this was originally 
     //0x0000
-
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////
     /* Map video memory and obtain permission for VGA port access. */
     if (open_memory_and_ports () == -1)
         return -1;
@@ -527,13 +528,7 @@ show_screen ()
 
     /* Calculate the source address. */
     addr = img3 + (show_x >> 2) + show_y * SCROLL_X_WIDTH;
-/////////////////////// BELOW LINE WRITTEN BY ME  //////////////////////////////////////////////////
-  //  unsigned char buf[5760];
-  //  char c = "H";
-  //  text_to_graphics(&c, buf, 0);
 
-  //  show_status_bar(buf);
-/////////////////////////////////////////////////////////////////////////////////////////////////////
     /* Draw to each plane in the video memory. */
     for (i = 0; i < 4; i++) {
   SET_WRITE_MASK (1 << (i + 8));
@@ -549,7 +544,12 @@ show_screen ()
     OUTW (0x03D4, ((target_img & 0x00FF) << 8) | 0x0D);
 }
 
-////////////////  THIS HELPER FUNCTION BELOW WRITTEN BY ME ////////////////////////
+////////////////  THIS HELPER FUNCTION BELOW WRITTEN BY ME /////////////////////////////////////////////////
+/***
+*     this function is called from adventure.c. Here we use the buffer we write the font data to.  
+*     The ascii is already stored in the buffer which is passed below
+*     To print we make use of a function similar to copy_image
+*/////
 void
 show_status_bar (unsigned char * buf)
 {
@@ -557,14 +557,14 @@ show_status_bar (unsigned char * buf)
 
   //text_to_graphics("HELLO", buf);
 
-  for (i = 0; i < 4; i++)
+  for (i = 0; i < 4; i++)                           //loop over through the planes
   {
-    SET_WRITE_MASK (1 << (i + 8));
-    copy_image2 (buf + 1440*i, 0x0000);
+    SET_WRITE_MASK (1 << (i + 8));                  //here the set_write_mask 
+    copy_image2 (buf + 1440*i, 0x0000);             //copy_image2 has the instruction for printing on the screen.
   }    
 }
 
-//////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 /*
  * clear_screens
@@ -593,7 +593,7 @@ clear_screens ()
  */
 #if !defined(TEXT_RESTORE_PROGRAM)
 
-
+//////////////////////  BELOW FUNCTION WRITTEN BY ME  //////////////////////////////////////////////////
 /*
  * draw_vert_line
  *   DESCRIPTION: Draw a vertical map line into the build buffer.  The 
@@ -628,22 +628,24 @@ draw_vert_line (int x)
     (*vert_line_fn) (x, show_y, buf);
 
     /* Calculate starting address in build buffer. */
-    addr = img3 + (x >> 2) + show_y * SCROLL_X_WIDTH;
-
+    addr = img3 + (x >> 2) + show_y * SCROLL_X_WIDTH;           //img3 gives the starting point
+                                                                //x >> 2 gives the plane offset
+                                                                //show_y * scroll_x_width gives total addresses
     /* Calculate plane offset of first pixel. */
-    p_off = (3 - (x & 3));
+    p_off = (3 - (x & 3));  
 
     /* Copy image data into appropriate planes in build buffer. */
-    for (i = 0; i < SCROLL_Y_DIM; i++) 
-    {
-      addr[p_off * SCROLL_SIZE] = buf[i];
-      addr = addr + SCROLL_X_WIDTH;
+    for (i = 0; i < SCROLL_Y_DIM; i++)                          //taking care of boundaries 
+    {                                                           //scroll_y_dim gives the length of the vert line 
+      addr[p_off * SCROLL_SIZE] = buf[i];                       //copy from buf into address
+      addr = addr + SCROLL_X_WIDTH;                             //increase address by one row of address to reach
+                                                                //a point directly below the current 'x' coordinate
     }   
     /* Return success. */
     return 0;
 }
 
-
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 /*
  * draw_horiz_line
  *   DESCRIPTION: Draw a horizontal map line into the build buffer.  The 
@@ -1061,7 +1063,11 @@ copy_image (unsigned char* img, unsigned short scr_addr)
     );
 }
 
-///////////BELOW HELPER FUNCTIN WRITTEN BY ME//////////////////
+/////////////////////BELOW HELPER FUNCTIN WRITTEN BY ME///////////////////////////////////////////////////////
+/*
+*   This function is exactly like copy_image() except that we change the offset here  
+*   We use 1440 from (320/4)*18 which is equal to the total addresses in the status bar.    
+*///////////
 static void
 copy_image2 (unsigned char* img, unsigned short scr_addr)
 {
@@ -1079,7 +1085,7 @@ copy_image2 (unsigned char* img, unsigned short scr_addr)
       : "eax", "ecx", "memory"
     );
 }
-////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 #if defined(TEXT_RESTORE_PROGRAM)
 
