@@ -569,7 +569,7 @@ unsigned char font_data[256][16] = {
 #define buff_size (18*320)
 #define scroll_size (80*18)
 
-void text_to_graphics(const char * s1, unsigned char * buf, int set_offset)
+void text_to_graphics(const char * s1, unsigned char * buffer, int set_offset)
 {
     int i,j,k,m;    
     unsigned char mask;
@@ -595,7 +595,7 @@ void text_to_graphics(const char * s1, unsigned char * buf, int set_offset)
     {
         for (i = 0; i < 5760; i++)
         {
-            buf[i] = 16;
+            buffer[i] = 16;
         }
     }
 
@@ -612,9 +612,9 @@ void text_to_graphics(const char * s1, unsigned char * buf, int set_offset)
                     for (j = 0; j < 4; j++)                     //this loop over all the 4 planes  
                     {
                         if(m<=3)                                //if the plane is 0,1,2,3 then this condition.
-                            buf[80 + (80*i) + 2*k + (m%4)*1440 + offset] = 0x15;    //just the color
+                            buffer[80 + (80*i) + 2*k + (m%4)*1440 + offset] = 0x15;    //just the color
                         else                                    //if the plane is 4,5,6,7 then we have to take care of offset.    
-                            buf[80 + (80*i) + 2*k + (m%4)*1440 + 1 + offset] = 0x15;    //just the color
+                            buffer[80 + (80*i) + 2*k + (m%4)*1440 + 1 + offset] = 0x15;    //just the color
                     }
                 }
                 mask = (mask >> 1);                             //shift the mask to get the next bit
