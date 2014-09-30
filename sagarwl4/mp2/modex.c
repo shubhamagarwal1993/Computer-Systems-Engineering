@@ -1,4 +1,4 @@
-/*									tab:8
+/*                  tab:8
  *
  * modex.c - VGA mode X graphics routines
  *
@@ -22,22 +22,22 @@
  * THE UNIVERSITY OF ILLINOIS HAS ANY OBLIGATION TO PROVIDE MAINTENANCE, 
  * SUPPORT, UPDATES, ENHANCEMENTS, OR MODIFICATIONS."
  *
- * Author:	    Steve Lumetta
- * Version:	    5
+ * Author:      Steve Lumetta
+ * Version:     5
  * Creation Date:   Fri Sep 10 09:59:17 2004
- * Filename:	    modex.c
+ * Filename:      modex.c
  * History:
- *	SL	1	Fri Sep 10 09:59:17 2004
- *		First written.
- *	SL	2	Sat Sep 12 16:41:45 2009
- *		Integrated original release back into main code base.
- *	SL	3	Sat Sep 12 17:58:20 2009
+ *  SL  1 Fri Sep 10 09:59:17 2004
+ *    First written.
+ *  SL  2 Sat Sep 12 16:41:45 2009
+ *    Integrated original release back into main code base.
+ *  SL  3 Sat Sep 12 17:58:20 2009
  *              Added display re-enable to VGA blank routine and comments
  *              on other VirtualPC->QEMU migration changes.
- *	SL	4	Sat Sep 10 20:43:47 2011
- *		Modified for MP2 F11 adventure game.
- *	SL	5	Sat Sep 14 16:13:20 2011
- *		Split fill_palette by mode and cleaned up code for release.
+ *  SL  4 Sat Sep 10 20:43:47 2011
+ *    Modified for MP2 F11 adventure game.
+ *  SL  5 Sat Sep 14 16:13:20 2011
+ *    Split fill_palette by mode and cleaned up code for release.
  */
 
 #include <fcntl.h>
@@ -70,7 +70,7 @@
  * middle of the available buffer area.
  */
 #define SCROLL_SIZE     (SCROLL_X_WIDTH * SCROLL_Y_DIM)
-#define SCREEN_SIZE	(SCROLL_SIZE * 4 + 1)
+#define SCREEN_SIZE (SCROLL_SIZE * 4 + 1)
 #define BUILD_BUF_SIZE  (SCREEN_SIZE + 20000) 
 #define BUILD_BASE_INIT ((BUILD_BUF_SIZE - SCREEN_SIZE) / 2)
 
@@ -139,7 +139,7 @@ static unsigned short text_graphics[NUM_GRAPHICS_REGS] = {
 static int open_memory_and_ports ();
 static void VGA_blank (int blank_bit);
 static void set_seq_regs_and_reset (unsigned short table[NUM_SEQUENCER_REGS],
-				    unsigned char val);
+            unsigned char val);
 static void set_CRTC_registers (unsigned short table[NUM_CRTC_REGS]);
 static void set_attr_registers (unsigned char table[NUM_ATTR_REGS * 2]);
 static void set_graphics_registers (unsigned short table[NUM_GRAPHICS_REGS]);
@@ -149,6 +149,9 @@ static void write_font_data ();
 static void set_text_mode_3 (int clear_scr);
 static void copy_image (unsigned char* img, unsigned short scr_addr);
 
+//////////////////////  THE BELOW CALL FUNCTION IS WRITTEN BY ME
+static void copy_image2 (unsigned char * img, unsigned short scr_addr);
+//////////////////////////////////////////////////////////////////////////////////
 
 /* 
  * Images are built in this buffer, then copied to the video memory.
@@ -183,8 +186,8 @@ static void copy_image (unsigned char* img, unsigned short scr_addr);
 #endif
 #define MEM_FENCE_MAGIC 0xF3
 static unsigned char build[BUILD_BUF_SIZE + 2 * MEM_FENCE_WIDTH];
-static int img3_off;		    /* offset of upper left pixel   */
-static unsigned char* img3;	    /* pointer to upper left pixel  */
+static int img3_off;        /* offset of upper left pixel   */
+static unsigned char* img3;     /* pointer to upper left pixel  */
 static int show_x, show_y;          /* logical view coordinates     */
 
 /* displayed video memory variables */
@@ -199,7 +202,7 @@ static unsigned short target_img;   /* offset of displayed screen image */
  */
 static void (*horiz_line_fn) (int, int, unsigned char[SCROLL_X_DIM]);
 static void (*vert_line_fn) (int, int, unsigned char[SCROLL_Y_DIM]);
-	
+  
 
 /* 
  * macro used to target a specific video plane or planes when writing
@@ -209,9 +212,9 @@ static void (*vert_line_fn) (int, int, unsigned char[SCROLL_Y_DIM]);
 #define SET_WRITE_MASK(mask_hi_bits)                                    \
 do {                                                                    \
     asm volatile ("                                                     \
-	movw $0x03C4,%%dx    	/* set write mask                    */;\
-	movb $0x02,%b0                                                 ;\
-	outw %w0,(%%dx)                                                 \
+  movw $0x03C4,%%dx     /* set write mask                    */;\
+  movb $0x02,%b0                                                 ;\
+  outw %w0,(%%dx)                                                 \
     " : : "a" ((mask_hi_bits)) : "edx", "memory");                      \
 } while (0)
 
@@ -242,10 +245,10 @@ do {                                                                    \
 do {                                                                    \
     asm volatile ("                                                     \
      1: movw 0(%1),%%ax                                                ;\
-	outw %%ax,(%w2)                                                ;\
-	addl $2,%1                                                     ;\
-	decl %0                                                        ;\
-	jne 1b                                                          \
+  outw %%ax,(%w2)                                                ;\
+  addl $2,%1                                                     ;\
+  decl %0                                                        ;\
+  jne 1b                                                          \
     " : /* no outputs */                                                \
       : "c" ((count)), "S" ((source)), "d" ((port))                     \
       : "eax", "memory", "cc");                                         \
@@ -258,10 +261,10 @@ do {                                                                    \
 do {                                                                    \
     asm volatile ("                                                     \
      1: movb 0(%1),%%al                                                ;\
-	outb %%al,(%w2)                                                ;\
-	incl %1                                                        ;\
-	decl %0                                                        ;\
-	jne 1b                                                          \
+  outb %%al,(%w2)                                                ;\
+  incl %1                                                        ;\
+  decl %0                                                        ;\
+  jne 1b                                                          \
     " : /* no outputs */                                                \
       : "c" ((count)), "S" ((source)), "d" ((port))                     \
       : "eax", "memory", "cc");                                         \
@@ -272,13 +275,13 @@ do {                                                                    \
  * set_mode_X
  *   DESCRIPTION: Puts the VGA into mode X.
  *   INPUTS: horiz_fill_fn -- this function is used as a callback (by
- *   			      draw_horiz_line) to obtain a graphical 
- *   			      image of a particular logical line for 
- *   			      drawing to the build buffer
+ *              draw_horiz_line) to obtain a graphical 
+ *              image of a particular logical line for 
+ *              drawing to the build buffer
  *           vert_fill_fn -- this function is used as a callback (by
- *   			     draw_vert_line) to obtain a graphical 
- *   			     image of a particular logical line for 
- *   			     drawing to the build buffer
+ *             draw_vert_line) to obtain a graphical 
+ *             image of a particular logical line for 
+ *             drawing to the build buffer
  *   OUTPUTS: none
  *   RETURN VALUE: 0 on success, -1 on failure
  *   SIDE EFFECTS: initializes the logical view window; maps video memory
@@ -337,9 +340,9 @@ set_mode_X (void (*horiz_fill_fn) (int, int, unsigned char[SCROLL_X_DIM]),
     set_CRTC_registers (mode_X_CRTC);            /* CRT control registers */
     set_attr_registers (mode_X_attr);            /* attribute registers   */
     set_graphics_registers (mode_X_graphics);    /* graphics registers    */
-    fill_palette_mode_x ();			 /* palette colors        */
-    clear_screens ();				 /* zero video memory     */
-    VGA_blank (0);			         /* unblank the screen    */
+    fill_palette_mode_x ();      /* palette colors        */
+    clear_screens ();        /* zero video memory     */
+    VGA_blank (0);               /* unblank the screen    */
 
     /* Return success. */
     return 0;
@@ -368,16 +371,16 @@ clear_mode_X ()
 
     /* Check validity of build buffer memory fence.  Report breakage. */
     for (i = 0; i < MEM_FENCE_WIDTH; i++) {
-	if (build[i] != MEM_FENCE_MAGIC) {
-	    puts ("lower build fence was broken");
-	    break;
-	}
+  if (build[i] != MEM_FENCE_MAGIC) {
+      puts ("lower build fence was broken");
+      break;
+  }
     }
     for (i = 0; i < MEM_FENCE_WIDTH; i++) {
         if (build[BUILD_BUF_SIZE + MEM_FENCE_WIDTH + i] != MEM_FENCE_MAGIC) {
-	    puts ("upper build fence was broken");
-	    break;
-	}
+      puts ("upper build fence was broken");
+      break;
+  }
     }
 }
 
@@ -404,9 +407,9 @@ set_view_window (int scr_x, int scr_y)
     int start_x, start_y; /* starting position for copying from old to new */ 
     int end_x, end_y;     /* ending position for copying from old to new   */ 
     int start_off;        /* offset of copy start relative to old build    */
-     		          /*    buffer start position                      */
+                  /*    buffer start position                      */
     int length;           /* amount of data to be copied                   */
-    int i;	          /* copy loop index                               */
+    int i;            /* copy loop index                               */
     unsigned char* start_addr;  /* starting memory address of copy     */
     unsigned char* target_addr; /* destination memory address for copy */
 
@@ -424,9 +427,9 @@ set_view_window (int scr_x, int scr_y)
     */
     if (img3_off + (scr_x >> 2) + scr_y * SCROLL_X_WIDTH >= 0 &&
         img3_off + 3 * SCROLL_SIZE +
-	    ((scr_x + SCROLL_X_DIM - 1) >> 2) + 
-	    (scr_y + SCROLL_Y_DIM - 1) * SCROLL_X_WIDTH < BUILD_BUF_SIZE)
-	return;
+      ((scr_x + SCROLL_X_DIM - 1) >> 2) + 
+      (scr_y + SCROLL_Y_DIM - 1) * SCROLL_X_WIDTH < BUILD_BUF_SIZE)
+  return;
 
     /*
      * If the new screen does not overlap at all with the old screen, none
@@ -434,10 +437,10 @@ set_view_window (int scr_x, int scr_y)
      * valid window of the build buffer in the middle of that buffer.
      */
     if (scr_x <= old_x - SCROLL_X_DIM || scr_x >= old_x + SCROLL_X_DIM ||
-	scr_y <= old_y - SCROLL_Y_DIM || scr_y >= old_y + SCROLL_Y_DIM) {
-	img3_off = BUILD_BASE_INIT - (scr_x >> 2) - scr_y * SCROLL_X_WIDTH;
-	img3 = build + img3_off + MEM_FENCE_WIDTH;
-	return;
+  scr_y <= old_y - SCROLL_Y_DIM || scr_y >= old_y + SCROLL_Y_DIM) {
+  img3_off = BUILD_BASE_INIT - (scr_x >> 2) - scr_y * SCROLL_X_WIDTH;
+  img3 = build + img3_off + MEM_FENCE_WIDTH;
+  return;
     }
 
     /*
@@ -453,18 +456,18 @@ set_view_window (int scr_x, int scr_y)
      */
     if (scr_x > old_x) {
         start_x = scr_x;
-	end_x = old_x;
+  end_x = old_x;
     } else {
         start_x = old_x;
-	end_x = scr_x;
+  end_x = scr_x;
     }
     end_x += SCROLL_X_DIM - 1;
     if (scr_y > old_y) {
         start_y = scr_y;
-	end_y = old_y;
+  end_y = old_y;
     } else {
         start_y = old_y;
-	end_y = scr_y;
+  end_y = scr_y;
     }
     end_y += SCROLL_Y_DIM - 1;
 
@@ -477,7 +480,7 @@ set_view_window (int scr_x, int scr_y)
     start_off = (start_x >> 2) + start_y * SCROLL_X_WIDTH;
     start_addr = img3 + start_off;
     length = (end_x >> 2) + end_y * SCROLL_X_WIDTH + 1 - start_off + 
-	     3 * SCROLL_SIZE;
+       3 * SCROLL_SIZE;
     img3_off = BUILD_BASE_INIT - (show_x >> 2) - show_y * SCROLL_X_WIDTH;
     img3 = build + img3_off + MEM_FENCE_WIDTH;
     target_addr = img3 + start_off;
@@ -488,11 +491,11 @@ set_view_window (int scr_x, int scr_y)
      * (You should be able to explain why!)
      */
     if (start_addr < target_addr)
-	for (i = length; i-- > 0; )
-	    target_addr[i] = start_addr[i];
+  for (i = length; i-- > 0; )
+      target_addr[i] = start_addr[i];
     else
-	for (i = 0; i < length; i++)
-	    target_addr[i] = start_addr[i];
+  for (i = 0; i < length; i++)
+      target_addr[i] = start_addr[i];
 }
 
 
@@ -510,7 +513,7 @@ show_screen ()
 {
     unsigned char* addr;  /* source address for copy             */
     int p_off;            /* plane offset of first display plane */
-    int i;		  /* loop index over video planes        */
+    int i;      /* loop index over video planes        */
 
     /* 
      * Calculate offset of build buffer plane to be mapped into plane 0 
@@ -524,12 +527,18 @@ show_screen ()
 
     /* Calculate the source address. */
     addr = img3 + (show_x >> 2) + show_y * SCROLL_X_WIDTH;
+/////////////////////// BELOW LINE WRITTEN BY ME  //////////////////////////////////////////////////
+  //  unsigned char buf[5760];
+  //  char c = "H";
+  //  text_to_graphics(&c, buf, 0);
 
+  //  show_status_bar(buf);
+/////////////////////////////////////////////////////////////////////////////////////////////////////
     /* Draw to each plane in the video memory. */
     for (i = 0; i < 4; i++) {
-	SET_WRITE_MASK (1 << (i + 8));
-	copy_image (addr + ((p_off - i + 4) & 3) * SCROLL_SIZE + (p_off < i), 
-	            target_img);
+  SET_WRITE_MASK (1 << (i + 8));
+  copy_image (addr + ((p_off - i + 4) & 3) * SCROLL_SIZE + (p_off < i), 
+              target_img);
     }
 
     /* 
@@ -540,6 +549,22 @@ show_screen ()
     OUTW (0x03D4, ((target_img & 0x00FF) << 8) | 0x0D);
 }
 
+////////////////  THIS HELPER FUNCTION BELOW WRITTEN BY ME ////////////////////////
+void
+show_status_bar (unsigned char * buf)
+{
+  int i;
+
+  //text_to_graphics("HELLO", buf);
+
+  for (i = 0; i < 4; i++)
+  {
+    SET_WRITE_MASK (1 << (i + 8));
+    copy_image2 (buf + 1440*i, 0x0000);
+  }    
+}
+
+//////////////////////////////////////////////////////////////////////////////////
 
 /*
  * clear_screens
@@ -637,13 +662,13 @@ draw_horiz_line (int y)
 {
     unsigned char buf[SCROLL_X_DIM]; /* buffer for graphical image of line */
     unsigned char* addr;             /* address of first pixel in build    */
-   				     /*     buffer (without plane offset)  */
+               /*     buffer (without plane offset)  */
     int p_off;                       /* offset of plane of first pixel     */
-    int i;			     /* loop index over pixels             */
+    int i;           /* loop index over pixels             */
 
     /* Check whether requested line falls in the logical view window. */
     if (y < 0 || y >= SCROLL_Y_DIM)
-	return -1;
+  return -1;
 
     /* Adjust y to the logical row value. */
     y += show_y;
@@ -660,10 +685,10 @@ draw_horiz_line (int y)
     /* Copy image data into appropriate planes in build buffer. */
     for (i = 0; i < SCROLL_X_DIM; i++) {
         addr[p_off * SCROLL_SIZE] = buf[i];
-	if (--p_off < 0) {
-	    p_off = 3;
-	    addr++;
-	}
+  if (--p_off < 0) {
+      p_off = 3;
+      addr++;
+  }
     }
 
     /* Return success. */
@@ -689,21 +714,21 @@ open_memory_and_ports ()
 
     /* Obtain permission to access ports 0x03C0 through 0x03DA. */
     if (ioperm (0x03C0, 0x03DA - 0x03C0 + 1, 1) == -1) {
-	perror ("set port permissions");
-	return -1;
+  perror ("set port permissions");
+  return -1;
     }
 
     /* Open file to access physical memory. */
     if ((mem_fd = open ("/dev/mem", O_RDWR)) == -1) {
         perror ("open /dev/mem");
-	return -1;
+  return -1;
     }
 
     /* Map video memory (0xA0000 - 0xBFFFF) into our address space. */
     if ((mem_image = mmap (0, VID_MEM_SIZE, PROT_READ | PROT_WRITE,
-			   MAP_SHARED, mem_fd, 0xA0000)) == MAP_FAILED) {
-	perror ("mmap video memory");
-	return -1;
+         MAP_SHARED, mem_fd, 0xA0000)) == MAP_FAILED) {
+  perror ("mmap video memory");
+  return -1;
     }
 
     /* Close /dev/mem file descriptor and return success. */
@@ -730,19 +755,19 @@ VGA_blank (int blank_bit)
     blank_bit = ((blank_bit & 1) << 5);
 
     asm volatile (
-	"movb $0x01,%%al         /* Set sequencer index to 1. */       ;"
-	"movw $0x03C4,%%dx                                             ;"
-	"outb %%al,(%%dx)                                              ;"
-	"incw %%dx                                                     ;"
-	"inb (%%dx),%%al         /* Read old value.           */       ;"
-	"andb $0xDF,%%al         /* Calculate new value.      */       ;"
-	"orl %0,%%eax                                                  ;"
-	"outb %%al,(%%dx)        /* Write new value.          */       ;"
-	"movw $0x03DA,%%dx       /* Enable display (0x20->P[0x3C0]) */ ;"
-	"inb (%%dx),%%al         /* Set attr reg state to index. */    ;"
-	"movw $0x03C0,%%dx       /* Write index 0x20 to enable. */     ;"
-	"movb $0x20,%%al                                               ;"
-	"outb %%al,(%%dx)                                               "
+  "movb $0x01,%%al         /* Set sequencer index to 1. */       ;"
+  "movw $0x03C4,%%dx                                             ;"
+  "outb %%al,(%%dx)                                              ;"
+  "incw %%dx                                                     ;"
+  "inb (%%dx),%%al         /* Read old value.           */       ;"
+  "andb $0xDF,%%al         /* Calculate new value.      */       ;"
+  "orl %0,%%eax                                                  ;"
+  "outb %%al,(%%dx)        /* Write new value.          */       ;"
+  "movw $0x03DA,%%dx       /* Enable display (0x20->P[0x3C0]) */ ;"
+  "inb (%%dx),%%al         /* Set attr reg state to index. */    ;"
+  "movw $0x03C0,%%dx       /* Write index 0x20 to enable. */     ;"
+  "movb $0x20,%%al                                               ;"
+  "outb %%al,(%%dx)                                               "
       : : "g" (blank_bit) : "eax", "edx", "memory");
 }
 
@@ -761,7 +786,7 @@ VGA_blank (int blank_bit)
  */   
 static void
 set_seq_regs_and_reset (unsigned short table[NUM_SEQUENCER_REGS],
-			unsigned char val)
+      unsigned char val)
 {
     /* 
      * Dump table of values to sequencer registers.  Includes forced reset
@@ -816,7 +841,7 @@ set_attr_registers (unsigned char table[NUM_ATTR_REGS * 2])
 {
     /* Reset attribute register to write index next rather than data. */
     asm volatile (
-	"inb (%%dx),%%al"
+  "inb (%%dx),%%al"
       : : "d" (0x03DA) : "eax", "memory");
     REP_OUTSB (0x03C0, table, NUM_ATTR_REGS * 2);
 }
@@ -836,7 +861,7 @@ set_graphics_registers (unsigned short table[NUM_GRAPHICS_REGS])
     REP_OUTSW (0x03CE, table, NUM_GRAPHICS_REGS);
 }
 
-
+  
 /*
  * fill_palette_mode_x
  *   DESCRIPTION: Fill VGA palette with necessary colors for the adventure 
@@ -852,38 +877,38 @@ fill_palette_mode_x ()
     /* 6-bit RGB (red, green, blue) values for first 64 colors */
     /* these are coded for 2 bits red, 2 bits green, 2 bits blue */
     static unsigned char palette_RGB[64][3] = {
-	{0x00, 0x00, 0x00}, {0x00, 0x00, 0x15},
-	{0x00, 0x00, 0x2A}, {0x00, 0x00, 0x3F},
-	{0x00, 0x15, 0x00}, {0x00, 0x15, 0x15},
-	{0x00, 0x15, 0x2A}, {0x00, 0x15, 0x3F},
-	{0x00, 0x2A, 0x00}, {0x00, 0x2A, 0x15},
-	{0x00, 0x2A, 0x2A}, {0x00, 0x2A, 0x3F},
-	{0x00, 0x3F, 0x00}, {0x00, 0x3F, 0x15},
-	{0x00, 0x3F, 0x2A}, {0x00, 0x3F, 0x3F},
-	{0x15, 0x00, 0x00}, {0x15, 0x00, 0x15},
-	{0x15, 0x00, 0x2A}, {0x15, 0x00, 0x3F},
-	{0x15, 0x15, 0x00}, {0x15, 0x15, 0x15},
-	{0x15, 0x15, 0x2A}, {0x15, 0x15, 0x3F},
-	{0x15, 0x2A, 0x00}, {0x15, 0x2A, 0x15},
-	{0x15, 0x2A, 0x2A}, {0x15, 0x2A, 0x3F},
-	{0x15, 0x3F, 0x00}, {0x15, 0x3F, 0x15},
-	{0x15, 0x3F, 0x2A}, {0x15, 0x3F, 0x3F},
-	{0x2A, 0x00, 0x00}, {0x2A, 0x00, 0x15},
-	{0x2A, 0x00, 0x2A}, {0x2A, 0x00, 0x3F},
-	{0x2A, 0x15, 0x00}, {0x2A, 0x15, 0x15},
-	{0x2A, 0x15, 0x2A}, {0x2A, 0x15, 0x3F},
-	{0x2A, 0x2A, 0x00}, {0x2A, 0x2A, 0x15},
-	{0x2A, 0x2A, 0x2A}, {0x2A, 0x2A, 0x3F},
-	{0x2A, 0x3F, 0x00}, {0x2A, 0x3F, 0x15},
-	{0x2A, 0x3F, 0x2A}, {0x2A, 0x3F, 0x3F},
-	{0x3F, 0x00, 0x00}, {0x3F, 0x00, 0x15},
-	{0x3F, 0x00, 0x2A}, {0x3F, 0x00, 0x3F},
-	{0x3F, 0x15, 0x00}, {0x3F, 0x15, 0x15},
-	{0x3F, 0x15, 0x2A}, {0x3F, 0x15, 0x3F},
-	{0x3F, 0x2A, 0x00}, {0x3F, 0x2A, 0x15},
-	{0x3F, 0x2A, 0x2A}, {0x3F, 0x2A, 0x3F},
-	{0x3F, 0x3F, 0x00}, {0x3F, 0x3F, 0x15},
-	{0x3F, 0x3F, 0x2A}, {0x3F, 0x3F, 0x3F}
+  {0x00, 0x00, 0x00}, {0x00, 0x00, 0x15},
+  {0x00, 0x00, 0x2A}, {0x00, 0x00, 0x3F},
+  {0x00, 0x15, 0x00}, {0x00, 0x15, 0x15},
+  {0x00, 0x15, 0x2A}, {0x00, 0x15, 0x3F},
+  {0x00, 0x2A, 0x00}, {0x00, 0x2A, 0x15},
+  {0x00, 0x2A, 0x2A}, {0x00, 0x2A, 0x3F},
+  {0x00, 0x3F, 0x00}, {0x00, 0x3F, 0x15},
+  {0x00, 0x3F, 0x2A}, {0x00, 0x3F, 0x3F},
+  {0x15, 0x00, 0x00}, {0x15, 0x00, 0x15},
+  {0x15, 0x00, 0x2A}, {0x15, 0x00, 0x3F},
+  {0x15, 0x15, 0x00}, {0x15, 0x15, 0x15},
+  {0x15, 0x15, 0x2A}, {0x15, 0x15, 0x3F},
+  {0x15, 0x2A, 0x00}, {0x15, 0x2A, 0x15},
+  {0x15, 0x2A, 0x2A}, {0x15, 0x2A, 0x3F},
+  {0x15, 0x3F, 0x00}, {0x15, 0x3F, 0x15},
+  {0x15, 0x3F, 0x2A}, {0x15, 0x3F, 0x3F},
+  {0x2A, 0x00, 0x00}, {0x2A, 0x00, 0x15},
+  {0x2A, 0x00, 0x2A}, {0x2A, 0x00, 0x3F},
+  {0x2A, 0x15, 0x00}, {0x2A, 0x15, 0x15},
+  {0x2A, 0x15, 0x2A}, {0x2A, 0x15, 0x3F},
+  {0x2A, 0x2A, 0x00}, {0x2A, 0x2A, 0x15},
+  {0x2A, 0x2A, 0x2A}, {0x2A, 0x2A, 0x3F},
+  {0x2A, 0x3F, 0x00}, {0x2A, 0x3F, 0x15},
+  {0x2A, 0x3F, 0x2A}, {0x2A, 0x3F, 0x3F},
+  {0x3F, 0x00, 0x00}, {0x3F, 0x00, 0x15},
+  {0x3F, 0x00, 0x2A}, {0x3F, 0x00, 0x3F},
+  {0x3F, 0x15, 0x00}, {0x3F, 0x15, 0x15},
+  {0x3F, 0x15, 0x2A}, {0x3F, 0x15, 0x3F},
+  {0x3F, 0x2A, 0x00}, {0x3F, 0x2A, 0x15},
+  {0x3F, 0x2A, 0x2A}, {0x3F, 0x2A, 0x3F},
+  {0x3F, 0x3F, 0x00}, {0x3F, 0x3F, 0x15},
+  {0x3F, 0x3F, 0x2A}, {0x3F, 0x3F, 0x3F}
     };
 
     /* Start writing at color 0. */
@@ -908,22 +933,22 @@ fill_palette_text ()
 {
     /* 6-bit RGB (red, green, blue) values VGA colors and grey scale */
     static unsigned char palette_RGB[32][3] = {
-	{0x00, 0x00, 0x00}, {0x00, 0x00, 0x2A},   /* palette 0x00 - 0x0F    */
-	{0x00, 0x2A, 0x00}, {0x00, 0x2A, 0x2A},   /* basic VGA colors       */
-	{0x2A, 0x00, 0x00}, {0x2A, 0x00, 0x2A},
-	{0x2A, 0x15, 0x00}, {0x2A, 0x2A, 0x2A},
-	{0x15, 0x15, 0x15}, {0x15, 0x15, 0x3F},
-	{0x15, 0x3F, 0x15}, {0x15, 0x3F, 0x3F},
-	{0x3F, 0x15, 0x15}, {0x3F, 0x15, 0x3F},
-	{0x3F, 0x3F, 0x15}, {0x3F, 0x3F, 0x3F},
-	{0x00, 0x00, 0x00}, {0x05, 0x05, 0x05},   /* palette 0x10 - 0x1F    */
-	{0x08, 0x08, 0x08}, {0x0B, 0x0B, 0x0B},   /* VGA grey scale         */
-	{0x0E, 0x0E, 0x0E}, {0x11, 0x11, 0x11},
-	{0x14, 0x14, 0x14}, {0x18, 0x18, 0x18},
-	{0x1C, 0x1C, 0x1C}, {0x20, 0x20, 0x20},
-	{0x24, 0x24, 0x24}, {0x28, 0x28, 0x28},
-	{0x2D, 0x2D, 0x2D}, {0x32, 0x32, 0x32},
-	{0x38, 0x38, 0x38}, {0x3F, 0x3F, 0x3F}
+  {0x00, 0x00, 0x00}, {0x00, 0x00, 0x2A},   /* palette 0x00 - 0x0F    */
+  {0x00, 0x2A, 0x00}, {0x00, 0x2A, 0x2A},   /* basic VGA colors       */
+  {0x2A, 0x00, 0x00}, {0x2A, 0x00, 0x2A},
+  {0x2A, 0x15, 0x00}, {0x2A, 0x2A, 0x2A},
+  {0x15, 0x15, 0x15}, {0x15, 0x15, 0x3F},
+  {0x15, 0x3F, 0x15}, {0x15, 0x3F, 0x3F},
+  {0x3F, 0x15, 0x15}, {0x3F, 0x15, 0x3F},
+  {0x3F, 0x3F, 0x15}, {0x3F, 0x3F, 0x3F},
+  {0x00, 0x00, 0x00}, {0x05, 0x05, 0x05},   /* palette 0x10 - 0x1F    */
+  {0x08, 0x08, 0x08}, {0x0B, 0x0B, 0x0B},   /* VGA grey scale         */
+  {0x0E, 0x0E, 0x0E}, {0x11, 0x11, 0x11},
+  {0x14, 0x14, 0x14}, {0x18, 0x18, 0x18},
+  {0x1C, 0x1C, 0x1C}, {0x20, 0x20, 0x20},
+  {0x24, 0x24, 0x24}, {0x28, 0x28, 0x28},
+  {0x2D, 0x2D, 0x2D}, {0x32, 0x32, 0x32},
+  {0x38, 0x38, 0x38}, {0x3F, 0x3F, 0x3F}
     };
 
     /* Start writing at color 0. */
@@ -959,9 +984,9 @@ write_font_data ()
 
     /* Copy font data from array into video memory. */
     for (i = 0, fonts = mem_image; i < 256; i++) {
-	for (j = 0; j < 16; j++)
-	    fonts[j] = font_data[i][j];
-	fonts += 32; /* skip 16 bytes between characters */
+  for (j = 0; j < 16; j++)
+      fonts[j] = font_data[i][j];
+  fonts += 32; /* skip 16 bytes between characters */
     }
 
     /* Prepare VGA for text mode. */
@@ -997,14 +1022,14 @@ set_text_mode_3 (int clear_scr)
     set_CRTC_registers (text_CRTC);              /* CRT control registers   */
     set_attr_registers (text_attr);              /* attribute registers     */
     set_graphics_registers (text_graphics);      /* graphics registers      */
-    fill_palette_text ();			 /* palette colors          */
-    if (clear_scr) {				 /* clear screens if needed */
-	txt_scr = (unsigned long*)(mem_image + 0x18000); 
-	for (i = 0; i < 8192; i++)
-	    *txt_scr++ = 0x07200720;
+    fill_palette_text ();      /* palette colors          */
+    if (clear_scr) {         /* clear screens if needed */
+  txt_scr = (unsigned long*)(mem_image + 0x18000); 
+  for (i = 0; i < 8192; i++)
+      *txt_scr++ = 0x07200720;
     }
     write_font_data ();                          /* copy fonts to video mem */
-    VGA_blank (0);			         /* unblank the screen      */
+    VGA_blank (0);               /* unblank the screen      */
 }
 
 
@@ -1028,14 +1053,33 @@ copy_image (unsigned char* img, unsigned short scr_addr)
      */
     asm volatile (
         "cld                                                 ;"
-       	"movl $16000,%%ecx                                   ;"
-       	"rep movsb    # copy ECX bytes from M[ESI] to M[EDI]  "
+        "movl $16000,%%ecx                                   ;"
+        "rep movsb    # copy ECX bytes from M[ESI] to M[EDI]  "
       : /* no outputs */
       : "S" (img), "D" (mem_image + scr_addr) 
       : "eax", "ecx", "memory"
     );
 }
 
+///////////BELOW HELPER FUNCTIN WRITTEN BY ME//////////////////
+static void
+copy_image2 (unsigned char* img, unsigned short scr_addr)
+{
+    /* 
+     * memcpy is actually probably good enough here, and is usually
+     * implemented using ISA-specific features like those below,
+     * but the code here provides an example of x86 string moves
+     */
+    asm volatile (
+        "cld                                                 ;"
+        "movl $1440,%%ecx                                   ;"
+        "rep movsb    # copy ECX bytes from M[ESI] to M[EDI]  "
+      : /* no outputs */
+      : "S" (img), "D" (mem_image + scr_addr) 
+      : "eax", "ecx", "memory"
+    );
+}
+////////////////////////////////////////////////////////////////
 
 #if defined(TEXT_RESTORE_PROGRAM)
 

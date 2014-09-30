@@ -249,6 +249,25 @@ game_loop ()
 
 	show_screen ();
 
+	//////////////////////////THIS HELPER FUNCTION WRITTEN BY ME//////////////
+	pthread_mutex_lock (&msg_lock);
+	unsigned char buf[5760];
+
+	if(status_msg[0] == '\0')
+	{
+		text_to_graphics (room_name (game_info.where), buf, 0);
+		text_to_graphics (get_typed_command(), buf, 1);
+	}	
+	else
+	{
+		text_to_graphics (status_msg, buf, 2);
+	}	
+
+	show_status_bar (buf);
+
+	pthread_mutex_unlock (&msg_lock);
+	//////////////////////////////////////////////////////////////////////////
+
 	/*
 	 * Wait for tick.  The tick defines the basic timing of our
 	 * event loop, and is the minimum amount of time between events.
