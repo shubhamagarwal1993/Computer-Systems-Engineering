@@ -81,7 +81,9 @@
 #define NUM_CRTC_REGS          25
 #define NUM_GRAPHICS_REGS       9
 #define NUM_ATTR_REGS          22
-
+//////////////////////  MAGIC NUMBERS WRITTEN BY ME   ////////////////////////////////////////////////////////////////
+#define STATUS_BAR_OFFSET   0x05A0 
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 /* VGA register settings for mode X */
 static unsigned short mode_X_seq[NUM_SEQUENCER_REGS] = {
     0x0100, 0x2101, 0x0F02, 0x0003, 0x0604
@@ -315,7 +317,7 @@ set_mode_X (void (*horiz_fill_fn) (int, int, unsigned char[SCROLL_X_DIM]),
 
     ///////////////////////////////////////////////////////////////////////////////////////////////////////
     /* One display page goes at the start of video memory. */
-    target_img = 0x05A0;
+    target_img = STATUS_BAR_OFFSET;
 
     //this was originally 
     //0x0000
