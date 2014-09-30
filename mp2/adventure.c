@@ -272,7 +272,7 @@ game_loop ()
 	}	
 
 
-	show_status_bar (buffer);											
+	print_status_bar (buffer);											
 
 	pthread_mutex_unlock (&msg_lock);					//release the lock				
 	///////////////////////////////////////////////////////////////////////////////////////////////////////////////////

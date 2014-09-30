@@ -554,7 +554,7 @@ show_screen ()
 *     To print we make use of a function similar to copy_image
 */////
 void
-show_status_bar (unsigned char * buffer)
+print_status_bar (unsigned char * buffer)
 {
   int i;
 
