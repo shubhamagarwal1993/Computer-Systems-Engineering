@@ -66,7 +66,9 @@ static int sanity_check (void);
 #define TICK_USEC      50000 /* tick length in microseconds          */
 #define STATUS_MSG_LEN 40    /* maximum length of status message     */
 #define MOTION_SPEED   2     /* pixels moved per command             */
-
+//////////////////////  MAGIC NUMBERS WRITTEN BY ME   ////////////////////////////////////////////////////////////////
+#define STATUS_BAR_PIXEL_OFFSET	5760
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 /* outcome of the game */
 typedef enum {GAME_WON, GAME_QUIT} game_condition_t;
 
@@ -257,7 +259,7 @@ game_loop ()
 	*/
 
 	pthread_mutex_lock (&msg_lock);						//start the lock here to stop most interrupts 
-	unsigned char buf[5760];							//create a buffer. Size is given by 320(width) * 18(height)
+	unsigned char buf[STATUS_BAR_PIXEL_OFFSET];			//create a buffer. Size is given by 320(width) * 18(height)
 														//use this buffer to write font data
 	if(status_msg[0] == '\0')							//status_msg records the current status message.
 	{													//dont print when string is empty.			
