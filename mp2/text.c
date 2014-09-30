@@ -1,4 +1,4 @@
-/*									tab:8
+/*                                  tab:8
  *
  * text.c - font data and text to graphics conversion utility
  *
@@ -22,15 +22,15 @@
  * THE UNIVERSITY OF ILLINOIS HAS ANY OBLIGATION TO PROVIDE MAINTENANCE, 
  * SUPPORT, UPDATES, ENHANCEMENTS, OR MODIFICATIONS."
  *
- * Author:	    Steve Lumetta
- * Version:	    2
+ * Author:      Steve Lumetta
+ * Version:     2
  * Creation Date:   Thu Sep  9 22:06:29 2004
- * Filename:	    text.c
+ * Filename:        text.c
  * History:
- *	SL	1	Thu Sep  9 22:06:29 2004
- *		First written.
- *	SL	2	Sat Sep 12 13:45:33 2009
- *		Integrated original release back into main code base.
+ *  SL  1   Thu Sep  9 22:06:29 2004
+ *      First written.
+ *  SL  2   Sat Sep 12 13:45:33 2009
+ *      Integrated original release back into main code base.
  */
 
 #include <string.h>
@@ -562,3 +562,64 @@ unsigned char font_data[256][16] = {
      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}
 };
 
+// ALL BELOW IS WRITTEN BY ME
+
+#define x_dim 320
+#define x_width 80
+#define buff_size (18*320)
+#define scroll_size (80*18)
+
+void text_to_graphics(const char * s1, unsigned char * buf, int set_offset)
+{
+    int i,j,k,m;    
+    unsigned char mask;
+    int letter;
+    int length = 0;
+    int offset = 0;
+
+    while(s1[length]!=0)
+    {
+        length++;
+    }    
+
+    if(set_offset == 2)
+    {
+        offset = (55-length)/2;
+    }    
+    else if(set_offset == 1)
+    {
+        offset = 60 - length;
+    }    
+
+    if(set_offset == 0 || set_offset == 2)
+    {
+        for (i = 0; i < 5760; i++)
+        {
+            buf[i] = 16;
+        }
+    }
+
+    for (k = 0; k < length; k++)
+    {
+        letter = s1[k];
+        for (i = 0; i < 16; i++)
+        {
+            mask = 0x80;
+            for (m = 0; m < 8; m++)
+            {
+                if ((mask & font_data[letter][i]) == mask)
+                {
+                    for (j = 0; j < 4; j++)
+                    {
+                        if(m<=3)
+                            buf[80 + (80*i) + 2*k + (m%4)*1440 + offset] = 0x15;
+                        else
+                            buf[80 + (80*i) + 2*k + (m%4)*1440 + 1 + offset] = 0x15;
+                    }
+                }
+                mask = (mask >> 1);
+            }
+        }
+    }    
+
+}
