@@ -152,7 +152,7 @@ static void write_font_data ();
 static void set_text_mode_3 (int clear_scr);
 static void copy_image (unsigned char* img, unsigned short scr_addr);
 
-//////////////////////  THE BELOW CALL FUNCTION IS WRITTEN BY ME
+//////////////////////  THE BELOW CALL FUNCTION IS WRITTEN BY ME /////////////////
 static void copy_image2 (unsigned char * img, unsigned short scr_addr);
 //////////////////////////////////////////////////////////////////////////////////
 
@@ -554,15 +554,15 @@ show_screen ()
 *     To print we make use of a function similar to copy_image
 */////
 void
-print_status_bar (unsigned char * buffer)
+print_status_bar (unsigned char * buffer)                     //takes buffer with final pixel locations 
 {
   int i;
 
   //text_to_graphics("HELLO", buffer);
 
-  for (i = 0; i < 4; i++)                                     //loop over through the planes
+  for (i = 0; i < 4; i++)                                         //loop over through the planes
   {
-    SET_WRITE_MASK (1 << (i + 8));                            //here the set_write_mask 
+    SET_WRITE_MASK (1 << (i + 8));                                //here the set_write_mask 
     copy_image2 (buffer + (STATUS_BAR_ADDR_OFFSET*i), 0x0000);   //copy_image2 has the instruction for printing on the screen.
   }    
 }
@@ -625,7 +625,7 @@ draw_vert_line (int x)
       return -1;      
 
     /* Adjust x to the logical column value. */
-    x += show_x;
+    x += show_x;                                                //bring x to starting position
 
     /* Get the image of the line. */
     (*vert_line_fn) (x, show_y, buf);
@@ -1072,7 +1072,7 @@ copy_image (unsigned char* img, unsigned short scr_addr)
 *   We use 1440 from (320/4)*18 which is equal to the total addresses in the status bar.    
 *///////////
 static void
-copy_image2 (unsigned char* img, unsigned short scr_addr)
+copy_image2 (unsigned char* img, unsigned short scr_addr)               //this function is for printing to screen
 {
     /* 
      * memcpy is actually probably good enough here, and is usually
@@ -1080,12 +1080,12 @@ copy_image2 (unsigned char* img, unsigned short scr_addr)
      * but the code here provides an example of x86 string moves
      */
     asm volatile (
-        "cld                                                 ;"
-        "movl $1440,%%ecx                                   ;"
-        "rep movsb    # copy ECX bytes from M[ESI] to M[EDI]  "
+        "cld                                                 ;"       //we have a combination of x86 and c
+        "movl $1440,%%ecx                                   ;"        //to store into ecx and eax
+        "rep movsb    # copy ECX bytes from M[ESI] to M[EDI]  "       //similar thing in mp1
       : /* no outputs */
-      : "S" (img), "D" (mem_image + scr_addr) 
-      : "eax", "ecx", "memory"
+      : "S" (img), "D" (mem_image + scr_addr)                         //finally send to memory
+      : "eax", "ecx", "memory"                                        //which prints
     );
 }
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////
