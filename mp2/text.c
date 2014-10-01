@@ -586,7 +586,7 @@ void text_to_graphics(unsigned char * buffer, const char* written_on_screen, con
     int i,j,k,m;                                                    
     unsigned char mask;
     int letter;
-    int length = 0;
+    //int length = 0;
     int offset = 0;
     int set_offset;
 
@@ -602,7 +602,7 @@ void text_to_graphics(unsigned char * buffer, const char* written_on_screen, con
     int written_length = strlen(written_on_screen);                     //find the length of the string being passes as it is used later on
     int present_room_length = strlen(present_room);                     //find the length of the string being passes as it is used later on
 
-
+//check for non-empty status message
     if(status_msg[0] == '\0')                                           //we check for the value of the status messge to decide if
     {                                                                   //it is a normal typed character/
         for(i = 0; i < present_room_length; i++)
@@ -612,14 +612,14 @@ void text_to_graphics(unsigned char * buffer, const char* written_on_screen, con
 
         for (i = 0; i <= 20; i++)
         {
-            tempstring[tempstring_len - 1 -i] = written_on_screen[written_length - i];   //we want to print this towards the end of our buffer since it 
+            tempstring[tempstring_len /*- 1*/ - i] = written_on_screen[written_length - i];   //we want to print this towards the end of our buffer since it 
         }                                                               //appers from the right side of the screen. 
         set_offset = 0;                                                 //thus we give a 0 offset and store it towards the end of the string    
     }
 
     else 
     {
-        offset = (55-strlen(status_msg))/2;                             //this is for the message like "what are you babbling about?"
+        offset = (60-strlen(status_msg))/2;                             //this is for the message like "what are you babbling about?"
         set_offset = 2;                                                 //we have to come up with an offset such that it positions the  
         for(i = 0; i < tempstring_len; i++)                                         //text into the center of the status bar.        
         {

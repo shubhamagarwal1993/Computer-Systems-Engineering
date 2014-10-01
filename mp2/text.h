@@ -47,3 +47,12 @@ extern unsigned char font_data[256][16];
 void text_to_graphics(unsigned char * buffer, const char* written_on_screen, const char* present_room, const char* status_msg);
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 #endif /* TEXT_H */
+
+
+/*		EXPLAINGING HOW THE BASIC "text_to_graphics" function operates
+*	We take the input from the given functions like typed_command and status message and store it in a string.
+*	The string is of length 40 as that is the total number of characters that can fit on the screen at one time
+*	We store the inputs on this temporary string as we want it to appear on the screen and then take each character
+*	from the string, process it, color it and put it in the buffer.
+*	We return this buffer.  
+*/	
