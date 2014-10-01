@@ -258,21 +258,21 @@ game_loop ()
 	*	We keep the function inside the locks for an interrupt might disturb the buffer.  
 	*/
 
-	pthread_mutex_lock (&msg_lock);						//start the lock here to stop most interrupts 
+	pthread_mutex_lock (&msg_lock);									//start the lock here to stop most interrupts 
 
-	unsigned char buffer[STATUS_BAR_PIXEL_OFFSET];			//create a buffer. Size is given by 320(width) * 18(height)
+	unsigned char buffer[STATUS_BAR_PIXEL_OFFSET];					//create a buffer. Size is given by 320(width) * 18(height)
 	
 	
 //	text_to_graphics (room_name (game_info.where), buffer, 0);		//use this buffer to write font data
 //	text_to_graphics (get_typed_command(), buffer, 1);				//here the typing command is getting stored		
 
-	const char* written_on_screen = get_typed_command();
-    const char* present_room = room_name(game_info.where);
-	text_to_graphics(buffer, written_on_screen, present_room, status_msg);
+	const char* written_on_screen = get_typed_command();			//we call the messages to pass into text_to_graphics
+    const char* present_room = room_name(game_info.where);			//we call the messages to pass into text_to_graphics
+	text_to_graphics(buffer, written_on_screen, present_room, status_msg);	
 
 
 	print_status_bar (buffer);											
-	pthread_mutex_unlock (&msg_lock);					//release the lock				
+	pthread_mutex_unlock (&msg_lock);								//release the lock				
 	///////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 	/*
