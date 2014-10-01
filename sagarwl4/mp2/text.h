@@ -44,6 +44,6 @@
 extern unsigned char font_data[256][16];
 
 //////////////// HELPER FUNCTION WRITTEN BY ME//////////////////////////////////////////////////////////////////
-void text_to_graphics(const char * s1, unsigned char * buf, int set_offset);
+void text_to_graphics(unsigned char * buffer, const char* written_on_screen, const char* present_room, const char* status_msg);
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 #endif /* TEXT_H */

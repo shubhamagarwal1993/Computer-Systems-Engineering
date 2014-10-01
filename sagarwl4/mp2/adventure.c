@@ -259,21 +259,19 @@ game_loop ()
 	*/
 
 	pthread_mutex_lock (&msg_lock);						//start the lock here to stop most interrupts 
+
 	unsigned char buffer[STATUS_BAR_PIXEL_OFFSET];			//create a buffer. Size is given by 320(width) * 18(height)
-														//use this buffer to write font data
-	if(status_msg[0] == '\0')							//status_msg records the current status message.
-	{													//dont print when string is empty.			
-		text_to_graphics (room_name (game_info.where), buffer, 0);		//here the offset 0 
-		text_to_graphics (get_typed_command(), buffer, 1);		//here the offset 1		
-	}															
-	else												//take care of thg conditions.
-	{
-		text_to_graphics (status_msg, buffer, 2);			//here the offset 2				
-	}	
+	
+	
+//	text_to_graphics (room_name (game_info.where), buffer, 0);		//use this buffer to write font data
+//	text_to_graphics (get_typed_command(), buffer, 1);				//here the typing command is getting stored		
+
+	const char* written_on_screen = get_typed_command();
+    const char* present_room = room_name(game_info.where);
+	text_to_graphics(buffer, written_on_screen, present_room, status_msg);
 
 
 	print_status_bar (buffer);											
-
 	pthread_mutex_unlock (&msg_lock);					//release the lock				
 	///////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
