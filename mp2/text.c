@@ -579,27 +579,55 @@ unsigned char font_data[256][16] = {
 #define buff_size (18*320)
 #define scroll_size (80*18)
 
-void text_to_graphics(const char * s1, unsigned char * buffer, int set_offset)
+void text_to_graphics(unsigned char * buffer, const char* written_on_screen, const char* present_room, const char* status_msg)
 {
     int i,j,k,m;    
     unsigned char mask;
     int letter;
     int length = 0;
     int offset = 0;
+    int set_offset;
 
-    while(s1[length]!=0)                        //this calculates the length of the string
+    unsigned char tempstring[41];
+    tempstring[40] = '\0';
+    for (i = 0; i < 40; i++)
     {
-        length++;                               //we get the length of the string 
-    }    
+        tempstring[i] = 32;
+    }
 
-    if(set_offset == 2)                         //we see if this offset is for status message    
+ 
+
+    int written_length = strlen(written_on_screen);                     //
+    int present_room_length = strlen(present_room);
+
+
+    if(status_msg[0] == '\0')
     {
-        offset = (55-length)/2;                 
-    }    
-    else if(set_offset == 1)                    //we see if this offset is for what we type
+        for(i = 0; i < present_room_length; i++)
+        {
+            tempstring[i] = present_room[i];
+        }
+
+        for (i = 0; i <= 20; i++)
+        {
+            tempstring[39-i] = written_on_screen[written_length - i];
+        }
+        set_offset = 0;
+    }
+
+    else 
     {
-        offset = 60 - length;
-    }    
+        offset = (55-strlen(status_msg))/2;
+        set_offset = 2;
+        for(i = 0; i < 40; i++)
+        {
+            //if(i > strlen(status_msg))
+            //    tempstring[i] = 32;    
+            tempstring[i] = status_msg[i];
+        }
+    }
+
+
 
     if(set_offset == 0 || set_offset == 2)      //if status message or what we write
     {
@@ -609,9 +637,16 @@ void text_to_graphics(const char * s1, unsigned char * buffer, int set_offset)
         }
     }
 
-    for (k = 0; k < length; k++)                                //loop to run over all the characters
+    /*
+
+    for (i = 0; i < 5760; i++)              //we give the buffer a color. Thus we traverse all the pixels of the buffer
     {
-        letter = s1[k];                                         //get the ascii of each charcater    
+        buffer[i] = 3;                      //3 is for blue color as in the demo
+    }
+    */
+    for (k = 0; k < 40; k++)                                //loop to run over all the characters
+    {
+        letter = tempstring[k];                                         //get the ascii of each charcater    
         for (i = 0; i < 16; i++)                                //loop over all the ascii in font_data
         {
             mask = 0x80;                                        //will use 80 as it segregates each bit using 1000 0000
