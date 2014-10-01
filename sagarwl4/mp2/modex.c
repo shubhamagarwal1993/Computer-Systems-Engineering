@@ -1071,6 +1071,16 @@ copy_image (unsigned char* img, unsigned short scr_addr)
 *   This function is exactly like copy_image() except that we change the offset here  
 *   We use 1440 from (320/4)*18 which is equal to the total addresses in the status bar.    
 *///////////
+/*
+ * copy_image
+ *   DESCRIPTION: Copy one plane of a screen from the build buffer to the 
+ *                video memory.
+ *   INPUTS: img -- a pointer to a single screen plane in the build buffer
+ *           scr_addr -- the destination offset in video memory
+ *   OUTPUTS: none
+ *   RETURN VALUE: none
+ *   SIDE EFFECTS: copies a plane from the build buffer to video memory
+ */   
 static void
 copy_image2 (unsigned char* img, unsigned short scr_addr)               //this function is for printing to screen
 {
