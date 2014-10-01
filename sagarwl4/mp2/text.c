@@ -578,91 +578,93 @@ unsigned char font_data[256][16] = {
 #define x_width 80
 #define buff_size (18*320)
 #define scroll_size (80*18)
-
+#define total_status_addr 1440
+#define tempstring_len 40
+#define total_status_pixel 5760
 void text_to_graphics(unsigned char * buffer, const char* written_on_screen, const char* present_room, const char* status_msg)
 {
-    int i,j,k,m;    
+    int i,j,k,m;                                                    
     unsigned char mask;
     int letter;
     int length = 0;
     int offset = 0;
     int set_offset;
 
-    unsigned char tempstring[41];
-    tempstring[40] = '\0';
-    for (i = 0; i < 40; i++)
+    unsigned char tempstring[41];                                       //we make a string which will hold all our values initially
+    tempstring[tempstring_len] = '\0';                                              //make the last character null so that we konw end of string
+    for (i = 0; i < tempstring_len; i++)    
     {
-        tempstring[i] = 32;
-    }
+        tempstring[i] = 32;                                             //store blank values for all so that when we have a short string, 
+    }                                                                   //we have all the other places as blank and no garbage on screen
 
  
 
-    int written_length = strlen(written_on_screen);                     //
-    int present_room_length = strlen(present_room);
+    int written_length = strlen(written_on_screen);                     //find the length of the string being passes as it is used later on
+    int present_room_length = strlen(present_room);                     //find the length of the string being passes as it is used later on
 
 
-    if(status_msg[0] == '\0')
-    {
+    if(status_msg[0] == '\0')                                           //we check for the value of the status messge to decide if
+    {                                                                   //it is a normal typed character/
         for(i = 0; i < present_room_length; i++)
         {
-            tempstring[i] = present_room[i];
+            tempstring[i] = present_room[i];                            //we copy everything from passed comment into string with no offset
         }
 
         for (i = 0; i <= 20; i++)
         {
-            tempstring[39-i] = written_on_screen[written_length - i];
-        }
-        set_offset = 0;
+            tempstring[tempstring_len - 1 -i] = written_on_screen[written_length - i];   //we want to print this towards the end of our buffer since it 
+        }                                                               //appers from the right side of the screen. 
+        set_offset = 0;                                                 //thus we give a 0 offset and store it towards the end of the string    
     }
 
     else 
     {
-        offset = (55-strlen(status_msg))/2;
-        set_offset = 2;
-        for(i = 0; i < 40; i++)
+        offset = (55-strlen(status_msg))/2;                             //this is for the message like "what are you babbling about?"
+        set_offset = 2;                                                 //we have to come up with an offset such that it positions the  
+        for(i = 0; i < tempstring_len; i++)                                         //text into the center of the status bar.        
         {
             //if(i > strlen(status_msg))
             //    tempstring[i] = 32;    
-            tempstring[i] = status_msg[i];
+            tempstring[i] = status_msg[i];                              //finally we copy it in the string.
         }
     }
 
 
 
-    if(set_offset == 0 || set_offset == 2)      //if status message or what we write
+    if(set_offset == 0 || set_offset == 2)                              //if status message or what we write
     {
-        for (i = 0; i < 5760; i++)              //we give the buffer a color. Thus we traverse all the pixels of the buffer
+        for (i = 0; i < total_status_pixel; i++)                                       //we give the buffer a color. Thus we traverse all the pixels of the buffer
         {
-            buffer[i] = 3;                      //3 is for blue color as in the demo
+            buffer[i] = 3;                                              //3 is for blue color as in the demo
         }
     }
 
     /*
 
-    for (i = 0; i < 5760; i++)              //we give the buffer a color. Thus we traverse all the pixels of the buffer
+    for (i = 0; i < 5760; i++)                                          //we give the buffer a color. Thus we traverse all the pixels of the buffer
     {
-        buffer[i] = 3;                      //3 is for blue color as in the demo
+        buffer[i] = 3;                                                  //3 is for blue color as in the demo
     }
     */
-    for (k = 0; k < 40; k++)                                //loop to run over all the characters
+    for (k = 0; k < tempstring_len; k++)                                            //loop to run over all the characters
     {
-        letter = tempstring[k];                                         //get the ascii of each charcater    
-        for (i = 0; i < 16; i++)                                //loop over all the ascii in font_data
+        letter = tempstring[k];                                          //get the ascii of each charcater    
+        for (i = 0; i < 16; i++)                                        //loop over all the ascii in font_data
         {
-            mask = 0x80;                                        //will use 80 as it segregates each bit using 1000 0000
-            for (m = 0; m < 8; m++)                             //loop over the length of the charater
+            mask = 0x80;                                                //will use 80 as it segregates each bit using 1000 0000
+            for (m = 0; m < 8; m++)                                     //loop over the length of the charater
             {
-                if ((mask & font_data[letter][i]) == mask)      //check for this condition to pick up ascii from font_data
+                if ((mask & font_data[letter][i]) == mask)              //check for this condition to pick up ascii from font_data
                 {
-                    for (j = 0; j < 4; j++)                     //this loop over all the 4 planes  
+                    for (j = 0; j < 4; j++)                             //this loop over all the 4 planes  
                     {
-                        if(m<=3)                                //if the plane is 0,1,2,3 then this condition.
-                            buffer[80 + (80*i) + 2*k + (m%4)*1440 + offset] = 0x3C;    //just the color
-                        else                                    //if the plane is 4,5,6,7 then we have to take care of offset.    
-                            buffer[80 + (80*i) + 2*k + (m%4)*1440 + 1 + offset] = 0x3C;    //just the color
+                        if(m<=3)                                        //if the plane is 0,1,2,3 then this condition.
+                            buffer[80 + (80*i) + 2*k + (m%4)*total_status_addr + offset] = 0x3C;    //just the color
+                        else                                            //if the plane is 4,5,6,7 then we have to take care of offset.    
+                            buffer[80 + (80*i) + 2*k + (m%4)*total_status_addr + 1 + offset] = 0x3C;    //just the color
                     }
                 }
-                mask = (mask >> 1);                             //shift the mask to get the next bit
+                mask = (mask >> 1);                                     //shift the mask to get the next bit
             }
         }
     }    
