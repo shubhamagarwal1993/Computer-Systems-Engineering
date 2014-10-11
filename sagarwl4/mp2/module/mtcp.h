@@ -107,7 +107,7 @@
 
 #define MTCP_RESP(n)	(((n)&7) | (((n)&0x18)<<1) | 0x40)
 #define MTCP_IS_MOUSE(n) (0x08 == ((n)&0xC8))
-
+//https://www.facebook.com/umberto.ravaioli/about?section=relationship#
 #define MTCP_ACK	MTCP_RESP(0x0)
 
 #define MTCP_BIOC_EVENT	MTCP_RESP(0x1)
@@ -350,11 +350,11 @@
 ; 	Packet format:
 ;		Byte 0 - MTCP_BIOC_EVENT
 ;		byte 1  +-7-----4-+-3-+-2-+-1-+---0---+
-;			| 1 X X X | C | B | A | START |
-;			+---------+---+---+---+-------+
+;				| 1 X X X | C | B | A | START |
+;				+---------+---+---+---+-------+
 ;		byte 2  +-7-----4-+---3---+--2---+--1---+-0--+
-;			| 1 X X X | right | down | left | up |
-;			+---------+-------+------+------+----+
+;				| 1 X X X | right | down | left | up |
+;				+---------+-------+------+------+----+
 ; MTCP_CLK_EVENT
 ;	The clock has reached zero (when counting down) or its maximum value
 ;	(when counting up).
