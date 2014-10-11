@@ -50,9 +50,11 @@ volatile int poll_type = 0; 		//1 means button poll, 2 means clock poll.
 
 //////////////////////////	GLOBAL VARIABLES FOR DATA   /////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////////////
-volatile char led_regular_buffer[6];
+volatile char led_regular_buffer[6] = {0, 0, 0, 0, 0, 0};
 volatile char regular_buffer[2];
+volatile char button_buffer[2];
 int previous_led_status = 0;
+spinlock_t lock = SPIN_LOCK_UNLOCKED;
 ///////////////////////////////////////////////////////////////////////////////////////////////
 
 
@@ -68,6 +70,12 @@ void process_rcvd_pckt1(unsigned a, unsigned b, unsigned c);
 void tuxctl_handle_packet (struct tty_struct* tty, unsigned char* packet)
 {
     unsigned a, b, c;
+	unsigned long irq;
+////////////////////////////////////////////////////////////////////
+////////	IMPLEMENTING LOCKS 	////////////////////////////////////
+	spin_lock_irqsave(&lock, irq);
+////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////
 	
     a = packet[0]; /* Avoid printk() sign extending the 8-bit */
     b = packet[1]; /* values when printing them. */
@@ -89,6 +97,8 @@ void tuxctl_handle_packet (struct tty_struct* tty, unsigned char* packet)
        	case MTCP_RESET: 					//Generated when devide re-initializes itself;					
 			regular_buffer[0] = (char)MTCP_BIOC_ON;
 			tuxctl_ldisc_put(tty, (char *)regular_buffer, 1);
+
+			tuxctl_ldisc_put(tty, (char *)led_regular_buffer, 6);			
 			reset_flag = 0;
 			ACK_FLAG = 0;
 			break;
@@ -96,19 +106,9 @@ void tuxctl_handle_packet (struct tty_struct* tty, unsigned char* packet)
     	//for buttons
     	case MTCP_BIOC_EVENT:				//Generated when the Button Interrupt-on-change mode is enabled and a button is either pressed or released.
     	{
-/*
-    		b = ~b;
-    		c = ~c;
-    		down = c;
-    		down = (down>>2) % 2;
-    		left = c;
-    		left = (left>>1) % 2;
-    		buttons = (b & 0x0F);
-    		buttons = (c<<4) | buttons;
-			buttons = buttons & 0x9F;
-			buttons = buttons | (left <<6);
-			buttons = buttons | (down <<5);
-*/
+			button_buffer[0] = b;
+			button_buffer[1] = c;    
+			printk("BIOC EVENT VALUES - %x %x\n", button_buffer[0], button_buffer[1]);		
 			break;
     	}
 
@@ -155,6 +155,15 @@ void tuxctl_handle_packet (struct tty_struct* tty, unsigned char* packet)
        	default:
        		break;
     }
+    /* clear packet data */
+	a = 0x00;
+	b = 0x00;
+	c = 0x00;
+////////////////////////////////////////////////////////////////////
+////////	IMPLEMENTING LOCKS 	////////////////////////////////////
+	spin_unlock_irqrestore(&lock, irq);
+////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////
     return;
 }
 
@@ -252,7 +261,6 @@ tuxctl_ioctl (struct tty_struct* tty, struct file* file,
 
     switch (cmd) 
     {
-    	printk("in the switch case before cases");
 		case TUX_INIT: 									// Initializes variables associated with driver
 		{
 			//unsigned char* regular_buf;					
@@ -264,7 +272,6 @@ tuxctl_ioctl (struct tty_struct* tty, struct file* file,
 			tuxctl_ldisc_put(tty, regular_buf_one, 1);
 
 			regular_buf_one[0] = MTCP_LED_USR;
-			printk("inside TUX_INIT\n");
 			tuxctl_ldisc_put(tty, regular_buf_one, 1);
 			ACK_FLAG = 1;
 			ret_val = 0;
@@ -281,21 +288,30 @@ about interrupt vs polling modes for buttons and ask about responses to the comp
 
 		case TUX_BUTTONS:
 		{
-			/*
-			unsigned int temp;
-			int ret;
-			printk("inside TUX_BUTTONS\n");
-			if (arg == 0)
-				return -EINVAL;	
+			/*int *int_ptr;
+			char a, b;
+			a = button_buffer[0];
+			b = button_buffer[1];
+			printk("\n BUFFER[0]  = %x \t BUFFER[1] = %x\n", button_buffer[0], button_buffer[1]);
+			*int_ptr = *int_ptr & 0xFFFFFF00;
+			*int_ptr = (*int_ptr | ((b & 0x0F)<<4));
+			*int_ptr = (*int_ptr | (a & 0xFF));
 
-			temp = 0;
-			temp = temp | buttons;
-			ret = copy_to_user((int *)arg, &temp, 4);
-			if(ret>0)
-				return -EFAULT;
-			else return 0;
-			*/
 			ret_val = 0;
+			break;*/
+			int int_ptr = 0;
+			char a, b;
+			a = button_buffer[0];
+			b = button_buffer[1];
+			printk("\n BUFFER[0]  = %x \t BUFFER[1] = %x\n", button_buffer[0], button_buffer[1]);
+			int_ptr = int_ptr & 0xFFFFFF00;
+			int_ptr = (int_ptr | ((b & 0x0F)<<4));
+			int_ptr = (int_ptr | (a & 0xFF));
+			ret_val = copy_to_user((int *)arg, &int_ptr, 4);
+			printk("ARGUMENT - %x", (unsigned int)arg);
+			if(ret_val>0)
+				ret_val = -1;
+			else ret_val = 0;
 			break;
 		}
 		
@@ -344,22 +360,27 @@ about interrupt vs polling modes for buttons and ask about responses to the comp
 					regular_buf[2+i] = regular_buf[2+i] | 0x10;
 				}
 			}	
-			printk("AFter loading Data into buffer");
 			// Where i write the LED 7 segment data into the regular_buffer
-			printk(" %x %x %x", regular_buf[3], regular_buf[4], regular_buf[5]);
 			tuxctl_ldisc_put(tty, regular_buf, 6);
+
+			// Saving the state of the LEDs
+			for(i=0; i<6; i++)
+			{
+				led_regular_buffer[i] = regular_buf[i];
+			}
 			ACK_FLAG = 1;
-			return 0;
+			ret_val = 0;
+			break;
 		}
 
-		case TUX_LED_ACK:
+		/*case TUX_LED_ACK:
 		if(ACK_FLAG==1)
 			return 1;
 		else
 			return 0;
-	
-	default:
-	    return -EINVAL;
+	*/
+		default:
+	    	return -EINVAL;
     }
-return 0;
+return ret_val;
 }

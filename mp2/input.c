@@ -328,14 +328,15 @@ display_time_on_tux (int num_seconds)
 int
 main ()
 {
+	uint8_t buf;
 	printf("starting here");
   //initialization written by me
     fd = open("/dev/ttyS0", O_RDWR | O_NOCTTY);					//written by me
 	int ldisc_num = N_MOUSE;
 	ioctl (fd, TIOCSETD, &ldisc_num);							//written by me	
 	ioctl (fd, TUX_INIT);										//written by me
-	ioctl (fd, TUX_BUTTONS, 0x00000000);						//written by me
-	ioctl (fd, TUX_SET_LED, 0x30FFBEF0);						//written by me
+	ioctl (fd, TUX_BUTTONS, &buf);									//written by me
+	ioctl (fd, TUX_SET_LED, 0x33FFFADE);						//written by me
 	//close fd
 	
 
