@@ -10,5 +10,8 @@
 #define TUX_LED_REQUEST _IO('E', 0x14)
 #define TUX_LED_ACK _IO('E', 0x15)
 
+void process_rcvd_pckt0(unsigned a, unsigned b, unsigned c);
+void process_rcvd_pckt1(unsigned a, unsigned b, unsigned c);
+
 #endif
 

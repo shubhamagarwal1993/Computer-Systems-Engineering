@@ -44,6 +44,8 @@
  *		Added keyboard input support when using Tux kernel mode.
  */
 
+
+
 #include <ctype.h>
 #include <fcntl.h>
 #include <stdio.h>
@@ -57,17 +59,20 @@
 #include "assert.h"
 #include "input.h"
 
+#include "module/tuxctl-ioctl.h"			//had been written by me to check code functionality
+//module/
+
 /* set to 1 and compile this file by itself to test functionality */
-#define TEST_INPUT_DRIVER 0
+#define TEST_INPUT_DRIVER 1				
+//was initially 0
 
 /* set to 1 to use tux controller; otherwise, uses keyboard input */
-#define USE_TUX_CONTROLLER 0
+#define USE_TUX_CONTROLLER 1
 
 
 /* stores original terminal settings */
 static struct termios tio_orig;
-
-
+static int fd;									//written by me
 /* 
  * init_input
  *   DESCRIPTION: Initializes the input controller.  As both keyboard and
@@ -115,6 +120,8 @@ init_input ()
 	perror ("tcsetattr to set stdin terminal settings");
 	return -1;
     }
+
+  
 
     /* Return success. */
     return 0;
@@ -305,19 +312,33 @@ shutdown_input ()
  *   RETURN VALUE: none 
  *   SIDE EFFECTS: changes state of controller's display
  */
+
 void
 display_time_on_tux (int num_seconds)
 {
-#if (USE_TUX_CONTROLLER != 0)
-#error "Tux controller code is not operational yet."
-#endif
+	#if (USE_TUX_CONTROLLER != 0)
+	#endif
+	//close(fd);
+	//ioctl (fd, TUX_INIT, &ldisc_num);						//written by me		
 }
+//#error "Tux controller code is not operational yet."
 
 
 #if (TEST_INPUT_DRIVER == 1)
 int
 main ()
 {
+	printf("starting here");
+  //initialization written by me
+    fd = open("/dev/ttyS0", O_RDWR | O_NOCTTY);					//written by me
+	int ldisc_num = N_MOUSE;
+	ioctl (fd, TIOCSETD, &ldisc_num);							//written by me	
+	ioctl (fd, TUX_INIT);										//written by me
+	ioctl (fd, TUX_BUTTONS, 0x00000000);						//written by me
+	ioctl (fd, TUX_SET_LED, 0x30FFBEF0);						//written by me
+	//close fd
+	
+
     cmd_t last_cmd = CMD_NONE;
     cmd_t cmd;
     static const char* const cmd_name[NUM_COMMANDS] = {
