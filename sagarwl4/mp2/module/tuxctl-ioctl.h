@@ -10,8 +10,8 @@
 #define TUX_LED_REQUEST _IO('E', 0x14)
 #define TUX_LED_ACK _IO('E', 0x15)
 
-void process_rcvd_pckt0(unsigned a, unsigned b, unsigned c);
-void process_rcvd_pckt1(unsigned a, unsigned b, unsigned c);
+void process_rcvd_pckt0(unsigned a, unsigned b, unsigned c);	//will check 1st packet received from TUX, parse it, and store in a temp buffer which we can read
+void process_rcvd_pckt1(unsigned a, unsigned b, unsigned c);	//will check 2nd packet received from TUX, parse it, and store in a temp buffer which we can read
 
 #endif
 
