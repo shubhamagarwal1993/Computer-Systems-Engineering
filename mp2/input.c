@@ -55,24 +55,34 @@
 #include <termio.h>
 #include <termios.h>
 #include <unistd.h>
+#include <pthread.h>								//include this to run threads
 
 #include "assert.h"
 #include "input.h"
 
-#include "module/tuxctl-ioctl.h"			//had been written by me to check code functionality
+#include "module/tuxctl-ioctl.h"					//included to use functions and variables from tuxctl-ioctl and module/ goes to the module folder to get file had been written by me to check code functionality
 //module/
 
+
 /* set to 1 and compile this file by itself to test functionality */
-#define TEST_INPUT_DRIVER 1				
-//was initially 0
+#define TEST_INPUT_DRIVER 0				
 
 /* set to 1 to use tux controller; otherwise, uses keyboard input */
-#define USE_TUX_CONTROLLER 1
+#define USE_TUX_CONTROLLER 0
 
-
-/* stores original terminal settings */
 static struct termios tio_orig;
-static int fd;									//written by me
+/* stores original terminal settings */
+
+	/**********************************************************
+	 *	Declaring global variables
+	 *	We declare a thread here to take care of timing issues
+	*************************************************************/ 
+
+pthread_t timer_tick;
+int fd;									
+cmd_t pressedbutton = CMD_NONE;
+int pushedbutton;
+
 /* 
  * init_input
  *   DESCRIPTION: Initializes the input controller.  As both keyboard and
@@ -99,7 +109,20 @@ init_input ()
 	return -1;
     }
 
-    /*
+	/****************************************
+	 *	open file and set file descriptor	*
+	 *	we call the ioctls					*
+	 *	We have the mouse to the ldisc 		*
+	 * 	becasue the TUX looks like a mouse	*
+	 *	to the computer						*
+	****************************************/
+ 
+    fd = open("/dev/ttyS0", O_RDWR | O_NOCTTY);					//written by me
+	int ldisc_num = N_MOUSE;
+	ioctl (fd, TIOCSETD, &ldisc_num);							//written by me	
+	
+  
+	/*
      * Save current terminal attributes for stdin.
      */
     if (tcgetattr (fileno (stdin), &tio_orig) != 0) {
@@ -107,6 +130,11 @@ init_input ()
 	return -1;
     }
 
+	/****************************************************************
+	* start a timer thread to act as a counter which is displayed	*
+	* It is the same as using the predefined clock					*	
+	****************************************************************/
+    pthread_create (&timer_tick, NULL, tick_tock, NULL);
     /*
      * Turn off canonical (line-buffered) mode and echoing of keystrokes
      * to the monitor.  Set minimal character and timing parameters so as
@@ -120,8 +148,6 @@ init_input ()
 	perror ("tcsetattr to set stdin terminal settings");
 	return -1;
     }
-
-  
 
     /* Return success. */
     return 0;
@@ -162,6 +188,68 @@ typed_a_char (char c)
 	typing[len + 1] = '\0';
     }
 }
+	
+	/************************************************************************
+	*	This function takes in a parameter and initializes the clock on		*
+	*	the display. We basically use this to convert into seconds and 		*
+	*	minutes. Moreover, we get a clock working in hexadecimal and 		*
+	*	we need to convert it to decimal numbers to show on the LEDsd		*
+	* It is the same as using the predefined clock							*	
+	************************************************************************/
+void *tick_tock(void * arg)
+{
+	int ticktock = 0; 									//start the time at 0 seconds
+	int minutes;										//store minutes here
+	int seconds;										//store seconds here
+	
+	while(1)											//start infinite loop so that time not affected
+	{
+		minutes = ticktock / 60;						//find minutes
+		seconds = ticktock % 60;						//find seconds
+		unsigned long to_display = 0x34FF0000;			//this @@@@@@@@@@@@@@@@@@@@@@@@@@ RANDOM WILL WORK ???
+		to_display = to_display | ((minutes & 0x000000FF)<<8);	//get minutes and store in temp value
+		to_display = to_display | (seconds & 0x000000FF);		//get seconds and store in temp value
+		ioctl (fd, TUX_SET_LED, to_display);					//call the ioctl to show recorded time on TUX LEDs
+		ticktock++;										//increase the time and now 1 sec and so on 		
+		usleep(1000*1000);								//this just slows the loop to 1 sec so that the timer increases by 1 sec  
+	}													//This is literally a clock hack
+}
+
+
+	/********************************************************************************
+	*	This function used GET COMMAND to take in values from the TUX and 	*
+	*	map it to the commands. Up, down, left, right , quiz, enter,  		*
+	*	move_left, and move right are mapped to the respective buttons.		*
+	*	This enables us to use the TUX in the game and we can control the 	*
+	* 	motion of the display or the picture. 					*	
+	* 	This is exactly similar to the get_command function in advecture.c	*
+	* 										*
+	*	Handle synchronous events--in this case, only player commands.		* 
+	* 	Note that typed commands that move objects may cause the room		*
+	* 	to be redrawn.								*
+	********************************************************************************/
+cmd_t
+get_tux_command()
+{
+	cmd_t pushedbutton = CMD_NONE;							//we make a cmd_t type
+	int arg = 0xFFFFFF00;									//we only touch the last two 
+	ioctl(fd, TUX_BUTTONS, &arg);
+	switch (arg)
+	{
+	    case 239: pushedbutton = CMD_UP;			break;		//
+	    case 127: pushedbutton = CMD_RIGHT;  		break;		//this scrolls picture down
+	    case 191: pushedbutton = CMD_DOWN;    		break;		//this scrolls picture down
+	    case 223: pushedbutton = CMD_LEFT; 			break;		//this scrolls picture down
+	    case 253: pushedbutton = CMD_MOVE_LEFT;		break;		//this scrolls picture down
+	    case 251: pushedbutton = CMD_ENTER; 		break;		//this scrolls picture down
+	    case 247: pushedbutton = CMD_MOVE_RIGHT;	break;		//this scrolls picture down
+		case 254: pushedbutton = CMD_QUIT; 			break;		//this scrolls picture down
+		default: break;
+	}
+	return pushedbutton;
+
+	
+}
 
 /* 
  * get_command
@@ -174,11 +262,14 @@ typed_a_char (char c)
  *   RETURN VALUE: command issued by the input controller
  *   SIDE EFFECTS: drains any keyboard input
  */
+
 cmd_t 
 get_command ()
 {
+	   
 #if (USE_TUX_CONTROLLER == 0) /* use keyboard control with arrow keys */
     static int state = 0;             /* small FSM for arrow keys */
+
 #endif
     static cmd_t command = CMD_NONE;
     cmd_t pushed = CMD_NONE;
@@ -268,14 +359,71 @@ get_command ()
 		break;
 	}
 #else /* USE_TUX_CONTROLLER */
+
+
+
+
+
+/********************************************************************************
+* 	To decide the case number for the various cases, we will follow the 	*
+*	diagram below. This has been taken from mtcp.h in modules.		*
+*										*
+*	+---7---+--6---+---5--+-4--+-3-+-2-+-1-+---0---+			*	
+*	| right | down | left | up | C | B | A | START |			*	
+*	+-------+------+------+----+---+---+---+-------+			*	
+*										*
+*	Since we are checking active low/high here we will use the commands	*
+*	right - 01111111(127)   down - 10111111(191)	left - 11011111(223)	*
+*	up - 11101111(239)	C - 11110111(247)	B - 11111011(251)	*	
+*	A - 11111101(253)      	START - 11111110(254)				*					
+********************************************************************************/
+
 	/* Tux controller mode; still need to support typed commands. */
 	if (valid_typing (ch)) {
 	    typed_a_char (ch);
 	} else if (10 == ch || 13 == ch) {
 	    pushed = CMD_TYPED;
+
 	}
+
+cmd_t
+
+
 #endif /* USE_TUX_CONTROLLER */
     }
+    int currbutton;
+	currbutton = 0xFFFFFF00;
+	ioctl(fd, TUX_BUTTONS, &currbutton);
+	switch (currbutton)
+	{
+	    case 239: pushed = CMD_UP;		break; 				//direction mapped with above comment				
+	    case 127: pushed = CMD_RIGHT;  	break; 				//direction mapped with above comment
+	    case 191: pushed = CMD_DOWN;    	break; 				//direction mapped with above comment
+	    case 223: pushed = CMD_LEFT; 	break;  			//direction mapped with above comment
+	    default: break;
+	}
+
+	if(currbutton != pushedbutton)
+	{
+		pushedbutton = currbutton;
+		switch(currbutton)
+		{
+			case 253: pushed = CMD_MOVE_LEFT;	break;		//direction mapped with above comment
+	    	case 251: pushed = CMD_ENTER;	 	break;		//direction mapped with above comment
+	    	case 247: pushed = CMD_MOVE_RIGHT;	break;		//direction mapped with above comment
+			case 254: pushed = CMD_QUIT; 		break;		//direction mapped with above comment
+			default: break;
+		}
+	}
+
+
+
+
+
+
+
+
+
 
     /*
      * Once a direction is pushed, that command remains active
@@ -313,14 +461,7 @@ shutdown_input ()
  *   SIDE EFFECTS: changes state of controller's display
  */
 
-void
-display_time_on_tux (int num_seconds)
-{
-	#if (USE_TUX_CONTROLLER != 0)
-	#endif
-	//close(fd);
-	//ioctl (fd, TUX_INIT, &ldisc_num);						//written by me		
-}
+
 //#error "Tux controller code is not operational yet."
 
 
@@ -328,18 +469,11 @@ display_time_on_tux (int num_seconds)
 int
 main ()
 {
-	uint8_t buf;
+	int tick = 0;
 	printf("starting here");
-  //initialization written by me
-    fd = open("/dev/ttyS0", O_RDWR | O_NOCTTY);					//written by me
-	int ldisc_num = N_MOUSE;
-	ioctl (fd, TIOCSETD, &ldisc_num);							//written by me	
 	ioctl (fd, TUX_INIT);										//written by me
-	ioctl (fd, TUX_BUTTONS, &buf);									//written by me
-	ioctl (fd, TUX_SET_LED, 0x33FFFADE);						//written by me
-	//close fd
-	
 
+	
     cmd_t last_cmd = CMD_NONE;
     cmd_t cmd;
     static const char* const cmd_name[NUM_COMMANDS] = {
@@ -355,15 +489,15 @@ main ()
 
     init_input ();
     while (1) {
-        while ((cmd = get_command ()) == last_cmd);
+        while ((cmd = get_tux_command ()) == last_cmd);
 	last_cmd = cmd;
 	printf ("command issued: %s\n", cmd_name[cmd]);
 	if (cmd == CMD_QUIT)
 	    break;
-	display_time_on_tux (83);
+	display_time_on_tux (tick++);
     }
+    close(fd);
     shutdown_input ();
     return 0;
 }
 #endif
-
