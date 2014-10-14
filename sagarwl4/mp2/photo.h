@@ -92,31 +92,31 @@ extern photo_t* read_photo (const char* fname);
  */
 //_______________________________________________________________________
 
-typedef struct tree_node
+typedef struct node_t
 {
-	int net_red;
-	int net_green;
-	int net_blue;
+	int total_red;
+	int total_green;
+	int total_blue;
 	int color;
 	int index;
 	int count;
-}tree_node;
+}node_t;
 
 //main functions
 
-void build_arrays();
+void arr_initialize();
 
-void add_to_levels(unsigned short pixel);
+void insert_values(unsigned short pixel);
 
-void set_palette(unsigned char palette[192][3]);
+void set_plt_values(unsigned char palette[192][3]);
 
-unsigned char vga_val(unsigned short pixel);
+unsigned char calculate_vga(unsigned short pixel);
 
 //helper functions
 
 int index_calc(int level, unsigned char red, unsigned char green, unsigned char blue);
 
-int compare(const void *a, const void *b);
+int sort_cmp(const void *a, const void *b);
 
 //_______________________________________________________________________
 #endif /* PHOTO_H */
