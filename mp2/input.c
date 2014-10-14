@@ -206,6 +206,10 @@ void *tick_tock(void * arg)
 	{
 		minutes = ticktock / 60;						//find minutes
 		seconds = ticktock % 60;						//find seconds
+		if(minutes > 99)
+			minutes = 0;
+		if(seconds > 99)
+			seconds = 0;	
 		unsigned long to_display = 0x34FF0000;			//this @@@@@@@@@@@@@@@@@@@@@@@@@@ RANDOM WILL WORK ???
 		to_display = to_display | ((minutes & 0x000000FF)<<8);	//get minutes and store in temp value
 		to_display = to_display | (seconds & 0x000000FF);		//get seconds and store in temp value
