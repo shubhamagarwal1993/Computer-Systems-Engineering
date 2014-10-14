@@ -66,9 +66,9 @@ static int sanity_check (void);
 #define TICK_USEC      50000 /* tick length in microseconds          */ 																					//might need for synchronization
 #define STATUS_MSG_LEN 40    /* maximum length of status message     */
 #define MOTION_SPEED   2     /* pixels moved per command             */
-//////////////////////		MAGIC NUMBERS WRITTEN BY ME   ////////////////////////////////////////////////////////////////
+/*********		MAGIC NUMBERS WRITTEN BY ME  ******/
 #define STATUS_BAR_PIXEL_OFFSET	5760
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+/*********	/////////////////////////////	*******/
 /* outcome of the game */
 typedef enum {GAME_WON, GAME_QUIT} game_condition_t;
 
@@ -149,9 +149,8 @@ static int time_is_after (struct timeval* t1, struct timeval* t2);
 
 
 /* file-scope variables */
-
 static game_info_t game_info; /* game information */
-int32_t enter_room;      																										// check this 
+int32_t enter_room;      																			
 
 /* 
  * The variables below are used to keep track of the status message helper
@@ -171,10 +170,8 @@ static pthread_t status_thread_id;
 static pthread_mutex_t msg_lock = PTHREAD_MUTEX_INITIALIZER;
 static pthread_cond_t  msg_cv = PTHREAD_COND_INITIALIZER;
 static char status_msg[STATUS_MSG_LEN + 1] = {'\0'};
-pthread_t clock_display;
-																													//we might have to initialize a thread here
 
-				////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
 /******************	THREADS	*************************************
  * We will create 2 threads here. The use is as follows:		*
  * One thread keeps running continuously in the background		*
@@ -185,9 +182,10 @@ pthread_t clock_display;
  * detection of interrupts so that we can use the TUX 			*
  * and the keyboards together.									*
 ****************************************************************/
+pthread_t clock_display;
 //static pthread_t keyboard_thread;
 //static pthread_t button_thread;
-				////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
 /* 
  * cancel_status_thread
  *   DESCRIPTION: Terminates the status message helper thread.  Used as
@@ -219,11 +217,11 @@ game_loop ()
      * Variables used to carry information between event loop ticks; see
      * initialization below for explanations of purpose.
      */
-    struct timeval start_time, tick_time; 																													//might need this for synchronization
+    struct timeval start_time, tick_time; 								
 
-    struct timeval cur_time; /* current time (during tick)      */																							//might need this for synchronization
-    cmd_t cmd;               /* command issued by input control */																							//might need this for synchronization
-    //int32_t enter_room;      /* player has changed rooms        */
+    struct timeval cur_time; 		/* current time (during tick)      */
+    cmd_t cmd;               /* command issued by input control */		
+    //int32_t enter_room;
 
     /* Record the starting time--assume success. */
     (void)gettimeofday (&start_time, NULL);
@@ -265,13 +263,14 @@ game_loop ()
 	}
 
 	show_screen ();
-	//////////////////////////THIS HELPER FUNCTION WRITTEN BY ME////////////////////////////////////////////////////
-	/*
-	*	This function fills the buffer with the ascii of the string which is passes to us. 
-	* 	It then calls show status bar which draws or prints the characters on the screen.
-	*	We use world.c to get the string and an offset while calling text_to_graphics.	
-	*	We keep the function inside the locks for an interrupt might disturb the buffer.  
-	*/
+
+	/**************************		THIS HELPER FUNCTION WRITTEN BY ME 		***************************************/
+	/****************************************************************************************
+	*	This function fills the buffer with the ascii of the string which is passes to us.	*	 	
+	* 	It then calls show status bar which draws or prints the characters on the screen.	*
+	*	We use world.c to get the string and an offset while calling text_to_graphics.		*
+	*	We keep the function inside the locks for an interrupt might disturb the buffer.  	*
+	****************************************************************************************/
 
 	pthread_mutex_lock (&msg_lock);									//start the lock here to stop most interrupts 
 

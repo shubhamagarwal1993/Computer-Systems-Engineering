@@ -61,7 +61,6 @@
 #include "input.h"
 
 #include "module/tuxctl-ioctl.h"					//included to use functions and variables from tuxctl-ioctl and module
-//module/
 
 
 /* set to 1 and compile this file by itself to test functionality */
@@ -77,7 +76,6 @@ static struct termios tio_orig;
 	 *	Declaring global variables
 	 *	We declare a thread here to take care of timing issues
 	*************************************************************/ 
-
 // pthread_t clock_display;
 int fd;									
 cmd_t pressedbutton = CMD_NONE;
@@ -198,69 +196,90 @@ typed_a_char (char c)
 	************************************************************************/
 void *timer(void * arg)
 {
-	int counter = 0; 									//start time at 0 seconds
-	int minutes = 0;										//store minutes here
-	int seconds = 0;										//store seconds here
+	int counter = 0; 									//keeps count of the time lapse 
+	int minutes = 0;									
+	int seconds = 0;									
 	
 	while(1)											//start infinite loop so that time not affected
 	{
-		minutes = counter / 60;						//find minutes
-		seconds = counter % 60;						//find seconds
-		if(minutes > 99)
+		minutes = counter / 60;							//convert time in hex to decimals
+		seconds = counter % 60;							
+		if(minutes > 99)								//to reset clock to zero when it goes to 99 min and 59 sec
 			minutes = 0;
 		if(seconds > 59)
 			seconds = 0;
-		unsigned long buf_time = 0x34FF0000;			
+		unsigned long buf_time = 0xF4FF0000;			//This call SET_LED so we follow the convention of the received arg
 		if(minutes < 10)
 			buf_time = buf_time & 0xFFF7FFFF;		
-		buf_time = buf_time | ((minutes & 0x000000FF)<<8);	//get minutes and store in temp value
-		buf_time = buf_time | (seconds & 0x000000FF);		//get seconds and store in temp value
-		ioctl (fd, TUX_SET_LED, buf_time);					//call the ioctl to show recorded time on TUX LEDs
-		counter++;										//increase the time and now 1 sec and so on 		
+		buf_time = buf_time | ((minutes & 0x000000FF)<<8);	
+		buf_time = buf_time | (seconds & 0x000000FF);		//have final arg value in buffer
+		ioctl (fd, TUX_SET_LED, buf_time);					//this sends to tux to display. 	
+		counter++;										 		
 		usleep(1000*1000);								//this just slows the loop to 1 sec so that the timer increases by 1 sec  
-	}													//This is literally a clock hack
+	}													
 }
 
+	/************************************************************************ 
+	 * get_command 															*		
+	 *   DESCRIPTION: Reads a command from the input controller.  As some 	*
+	 *                controllers provide only absolute input (e.g., go 	*
+	 *                right), the current direction is needed as an input 	*
+	 *                to this routine.										*
+	 *   INPUTS: cur_dir -- current direction of motion 					*
+	 *   OUTPUTS: none 														*
+	 *   RETURN VALUE: command issued by the input controller 				*
+	 *   SIDE EFFECTS: drains any keyboard input 							*
+	 ***********************************************************************/
 
-	/********************************************************************************
+	/************************************************************************
 	*	This function used GET COMMAND to take in values from the TUX and 	*
 	*	map it to the commands. Up, down, left, right , quiz, enter,  		*
 	*	move_left, and move right are mapped to the respective buttons.		*
 	*	This enables us to use the TUX in the game and we can control the 	*
-	* 	motion of the display or the picture. 					*	
+	* 	motion of the display or the picture. 								*	
 	* 	This is exactly similar to the get_command function in advecture.c	*
-	* 										*
+	* 																		*
 	*	Handle synchronous events--in this case, only player commands.		* 
 	* 	Note that typed commands that move objects may cause the room		*
-	* 	to be redrawn.								*
-	********************************************************************************/
+	* 	to be redrawn.														*
+	************************************************************************/
 cmd_t
 get_tux_command()
 {
-	cmd_t pushed = CMD_NONE;							//we make a cmd_t type
-	int arg = 0xFFFFFF00;									//we only touch the last two 
-	int currbutton = 0xFFFFFF00;
-	
-	ioctl(fd, TUX_BUTTONS, &currbutton);
-	switch (currbutton)
+	cmd_t pushed = CMD_NONE;								
+	int arg = 0xFFFFFF00;									//since we take active low, we make all 1s to show no button is pressesed  
+		
+	ioctl(fd, TUX_BUTTONS, &arg);							//this ioctl updates the arg to tell which button is kept pressed
+/*	We separate these buttons to basically show which buttons should work when kept pressed */
+	switch (arg)
 	{
-	    case 239: pushed = CMD_UP;		break; 				//direction mapped with above comment				
-	    case 127: pushed = CMD_RIGHT;  	break; 				//direction mapped with above comment
-	    case 191: pushed = CMD_DOWN;    break; 				//direction mapped with above comment
-	    case 223: pushed = CMD_LEFT; 	break;  			//direction mapped with above comment
-	    default: break;
+	    case 239: pushed = CMD_UP;							
+	    	break; 								
+	    case 127: pushed = CMD_RIGHT;  						//these buttons work when kept pressed
+	    	break; 				
+	    case 191: pushed = CMD_DOWN;    
+	    	break; 				
+	    case 223: pushed = CMD_LEFT; 						//direction mapped with above comment
+	    	break;  			
+	    default: 
+	    	break;
 	}
-
-	if(currbutton != pushedbutton)
+/*	We separate these buttons to basically show which buttons should not work when kept pressed */
+	if(arg != pushedbutton)
 	{
-		pushedbutton = currbutton;
-		switch(currbutton)
+		pushedbutton = arg;
+		switch(arg)
 		{
-			case 253: pushed = CMD_MOVE_LEFT;	break;		//direction mapped with above comment
-	    	case 251: pushed = CMD_ENTER;	 	break;		//direction mapped with above comment
-	    	case 247: pushed = CMD_MOVE_RIGHT;	break;		//direction mapped with above comment
-			case 254: pushed = CMD_QUIT; 		break;		//direction mapped with above comment
-			default: break;
+			case 253: pushed = CMD_MOVE_LEFT;				
+				break;		
+	    	case 251: pushed = CMD_ENTER;	 				//these buttons only work when presses again and again
+	    		break;		
+	    	case 247: pushed = CMD_MOVE_RIGHT;	
+	    		break;		
+			case 254: pushed = CMD_QUIT; 					//direction mapped with above comment
+				break;		
+			default:
+				break;
 		}
 	}
 return pushed;
@@ -404,40 +423,7 @@ get_command ()
 #endif /* USE_TUX_CONTROLLER */
     }
     pushed = get_tux_command();
- //    int currbutton;
-	// currbutton = 0xFFFFFF00;
-	// ioctl(fd, TUX_BUTTONS, &currbutton);
-	// switch (currbutton)
-	// {
-	//     case 239: pushed = CMD_UP;		break; 				//direction mapped with above comment				
-	//     case 127: pushed = CMD_RIGHT;  	break; 				//direction mapped with above comment
-	//     case 191: pushed = CMD_DOWN;    	break; 				//direction mapped with above comment
-	//     case 223: pushed = CMD_LEFT; 	break;  			//direction mapped with above comment
-	//     default: break;
-	// }
-
-	// if(currbutton != pushedbutton)
-	// {
-	// 	pushedbutton = currbutton;
-	// 	switch(currbutton)
-	// 	{
-	// 		case 253: pushed = CMD_MOVE_LEFT;	break;		//direction mapped with above comment
-	//     	case 251: pushed = CMD_ENTER;	 	break;		//direction mapped with above comment
-	//     	case 247: pushed = CMD_MOVE_RIGHT;	break;		//direction mapped with above comment
-	// 		case 254: pushed = CMD_QUIT; 		break;		//direction mapped with above comment
-	// 		default: break;
-	// 	}
-	// }
-
-
-
-
-
-
-
-
-
-
+ 
     /*
      * Once a direction is pushed, that command remains active
      * until a turn is taken.
