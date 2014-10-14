@@ -317,6 +317,10 @@ prep_room (const room_t* r)
 {
     /* Record the current room. */
     cur_room = r;
+    photo_t * photo = room_photo(r);
+    int i;
+    for (i=0; i<192; i++)
+    	write_palette(64+i, (photo->palette[i][0] << 1) & 0x3F, photo->palette[i][1]& 0x3F, (photo->palette[i][2] << 1) & 0x3F);
 }
 
 
@@ -444,6 +448,55 @@ read_photo (const char* fname)
 	return NULL;
     }
 
+    build_arrays();
+
+     /* 
+     * Loop over rows from bottom to top.  Note that the file is stored
+     * in this order, whereas in memory we store the data in the reverse
+     * order (top to bottom).
+     */
+    for (y = p->hdr.height; y-- > 0; )
+    {
+
+	/* Loop over columns from left to right. */
+		for (x = 0; p->hdr.width > x; x++)
+		{
+
+		    /* 
+		     * Try to read one 16-bit pixel.  On failure, clean up and 
+		     * return NULL.
+		     */
+		    if (1 != fread (&pixel, sizeof (pixel), 1, in))
+		    {
+				free (p->img);
+				free (p);
+			    (void)fclose (in);
+				return NULL;
+		    }
+		    else {
+		    add_to_levels(pixel);
+			}
+		    /* 
+		     * 16-bit pixel is coded as 5:6:5 RGB (5 bits red, 6 bits green,
+		     * and 6 bits blue).  We change to 2:2:2, which we've set for the
+		     * game objects.  You need to use the other 192 palette colors
+		     * to specialize the appearance of each photo.
+		     *
+		     * In this code, you need to calculate the p->palette values,
+		     * which encode 6-bit RGB as arrays of three uint8_t's.  When
+		     * the game puts up a photo, you should then change the palette 
+		     * to match the colors needed for that photo.
+		     */
+		    /*p->img[p->hdr.width * y + x] = (((pixel >> 14) << 4) |
+						    (((pixel >> 9) & 0x3) << 2) |
+						    ((pixel >> 3) & 0x3));*/
+		}
+    }
+
+    set_palette(p->palette);
+    fseek(in, 0, SEEK_SET);
+   
+
     /* 
      * Loop over rows from bottom to top.  Note that the file is stored
      * in this order, whereas in memory we store the data in the reverse
@@ -476,9 +529,10 @@ read_photo (const char* fname)
 	     * the game puts up a photo, you should then change the palette 
 	     * to match the colors needed for that photo.
 	     */
-	    p->img[p->hdr.width * y + x] = (((pixel >> 14) << 4) |
+	    /*p->img[p->hdr.width * y + x] = (((pixel >> 14) << 4) |
 					    (((pixel >> 9) & 0x3) << 2) |
-					    ((pixel >> 3) & 0x3));
+					    ((pixel >> 3) & 0x3));*/
+		p->img[p->hdr.width * y + x] = vga_val(pixel);
 	}
     }
 
@@ -487,4 +541,210 @@ read_photo (const char* fname)
     return p;
 }
 
+//______________________________________________________________________
 
+//the two arrays that represent the required octree levels
+static tree_node lv_2[64];
+static tree_node lv_4[4096];
+
+/* 
+ * build_arrays()
+ *   DESCRIPTION: This function is responsible for setting up the 
+ *				  arrays representing both the required levels.
+ *				  This includes initializing all the array variables.
+ *   INPUTS: -- 
+ *   OUTPUTS: --
+ *   RETURN VALUE: none
+ *   SIDE EFFECTS: none
+ */
+void
+build_arrays()
+{
+	int i = 0;
+	for(i = 0; i < 4096; i++)
+	{		
+		lv_4[i].net_red = 0;
+		lv_4[i].net_green = 0;
+		lv_4[i].net_blue = 0;
+		lv_4[i].color = i;
+		lv_4[i].count = 0;
+	}
+
+	for(i = 0; i < 64; i++)
+	{
+		lv_2[i].net_red = 0;
+		lv_2[i].net_green = 0;
+		lv_2[i].net_blue = 0;
+		lv_2[i].color = i;
+		lv_2[i].count = 0;
+	}
+}
+
+/* 
+ * add_to_levels()
+ *   DESCRIPTION: Given a pixel, this function checks the respective significant bits 
+ *				  and adds the color of the pixel to the appropriate cells on the level
+ *				  two and the level four of the octrees.
+ *   INPUTS: the pixel that is to be read 
+ *   OUTPUTS: --
+ *   RETURN VALUE: none
+ *   SIDE EFFECTS: changes the information stored in a cell of the lv_2 and lv_4 arrays.
+ */
+void
+add_to_levels(unsigned short pixel)
+{
+	//extract r,g and b from pixel's 5:6:5 rgb structure by bit-shifting
+	unsigned char red =	(pixel >> 11) & 0x1F; 
+	unsigned char green = (pixel >> 5) & 0x3F;
+	unsigned char blue = (pixel) & 0x1F;
+
+	//basis obtained r,g and b values, calculate the cell index for level 2 array
+	int posn2 = ((red >> 3) << 4 | (green >> 4) << 2 | (blue >> 3));;
+	//int posn2 = ((red >> 3) << 4 | (green >> 4) << 2 | (blue >> 3));
+
+	//
+	lv_2[posn2].net_red = lv_2[posn2].net_red 	+ red;
+	lv_2[posn2].net_green = lv_2[posn2].net_green + green;
+	lv_2[posn2].net_blue = lv_2[posn2].net_blue	+ blue;
+	lv_2[posn2].count++;
+
+	//basis obtained r,g and b values, calculate the cell index for level 4 array
+	int posn4 = ((red >> 1) << 8 | (green >> 2) << 4 | (blue >> 1));
+	//int posn4 = ((red >> 1) << 8 | (green >> 2) << 4 | (blue >> 1));
+
+	lv_4[posn4].net_red = lv_4[posn4].net_red 	+ red;
+	lv_4[posn4].net_green = lv_4[posn4].net_green + green;
+	lv_4[posn4].net_blue = lv_4[posn4].net_blue	+ blue;
+	lv_4[posn4].count++;	
+}
+
+/* 
+ * index_calc()
+ *   DESCRIPTION: Helper Function. Required by add_to_levels(). 
+ *				  Given the depth of the current branch and the RGB values,
+ *				  this function determines the appropriate cell index.
+ *   INPUTS: the depth level(2||4), and the Red(5 bits), Green (6 bits) and Blue(5 bits) values. 
+ *   OUTPUTS: the appropriate cell index.
+ *   RETURN VALUE: int
+ *   SIDE EFFECTS: --
+ */
+ /*
+int
+index_calc(int level, unsigned char red, unsigned char green, unsigned char blue)
+{
+	if(level == 2)
+		return 
+
+	else if(level == 4)
+		
+
+	return 0;
+}
+*/
+/* 
+ * compare()
+ *   DESCRIPTION: Helper Function. Required by qsort(). 
+ *				  Simply compares two given tree_node types basis their count parameter.
+ *   INPUTS: two pointers to the two tree_node cells that are to be compared 
+ *   OUTPUTS: int
+ *   RETURN VALUE: int
+ *   SIDE EFFECTS: --
+ */
+int compare(const void *a, const void *b)
+{
+	return ((*(tree_node*)a).count < (*(tree_node*)b).count);
+}
+
+/* 
+ * set_palette()
+ *   DESCRIPTION: This function is responsible to actually set up the palette provided
+ *				  by photo.c. If a pixel has already been represented by a fourth level node,
+ *				  this function also removes its representation from a level two node.
+ *   INPUTS: the current photo's 2D palette 
+ *   OUTPUTS: --
+ *   RETURN VALUE: none
+ *   SIDE EFFECTS: changes the information stored in the photo palette as well as the lv_2 nodes.
+ */
+void
+set_palette(unsigned char palette[192][3])
+{
+	qsort(lv_4, 4096, sizeof(tree_node), compare);
+
+	//add apt pixel info to the fourth level
+	int i = 64;
+	while(i < 192)
+	{
+		if(lv_4[i - 64].count)
+		{
+		  palette[i][0] = lv_4[i-64].net_red / lv_4[i-64].count;
+		  palette[i][1] = lv_4[i-64].net_green / lv_4[i-64].count;
+		  palette[i][2] = lv_4[i-64].net_blue / lv_4[i-64].count;
+		}	
+			
+			unsigned char red 	= lv_4[i - 64].color >> 10 & 0x3;
+			unsigned char green = lv_4[i - 64].color >> 6  & 0x3;
+			unsigned char blue 	= lv_4[i - 64].color >> 2  & 0x3;
+			int posn2 = (red << 4) | (green << 2) | blue;
+
+			lv_2[posn2].net_red 	-= lv_4[i - 64].net_red;
+			lv_2[posn2].net_green 	-= lv_4[i - 64].net_green;
+			lv_2[posn2].net_blue 	-= lv_4[i - 64].net_blue;
+			lv_2[posn2].count 		-= lv_4[i - 64].count;
+
+		lv_4[i-64].index = i;
+		i++;
+	}
+
+	i = 0;
+	while(i < 64)
+	{
+		if(lv_2[i].count)
+		{
+		  palette[i][0] = lv_2[i].net_red / lv_2[i].count;
+		  palette[i][1] = lv_2[i].net_green / lv_2[i].count;
+		  palette[i][2] = lv_2[i].net_blue / lv_2[i].count;
+		}
+		
+		lv_2[i].index = i;
+		i++;
+	}
+
+	return;
+}
+
+/* 
+ * vga_val()
+ *   DESCRIPTION: Given a pixel, this function calculates the appropriate value the VGA  
+ *				  would need to actually print to the screen.
+ *				  two and the level four of the octrees.
+ *   INPUTS: the pixel that is to be read 
+ *   OUTPUTS: the value for the VGA.
+ *   RETURN VALUE: unsigned char
+ *   SIDE EFFECTS: --
+ */
+unsigned char
+vga_val(unsigned short pixel)
+{
+	//extract r,g and b from pixel's 5:6:5 rgb structure by bit-shifting 
+	unsigned char red = (pixel >> 11) & 0x1F;
+	unsigned char green = (pixel >> 5) & 0x3F;
+	unsigned char blue = pixel & 0x1F;
+
+	//basis the rgb values, calculate the current index
+	int curr_index = ((red >> 1) << 8) | ((green >> 2) << 4) | (blue >> 1);
+	int i = 0;
+
+	//check if the index was part of the fourth level
+	for(i = 0; i < 128; i++)
+	{
+		if(lv_4[i].color == curr_index)
+			return lv_4[i].index + 64;
+	}
+
+	//if not part of lv_4, index has to be part of lv_2
+	curr_index = ((red >> 3) << 4) | ((green >> 4) << 2) | (blue >> 3);
+	return curr_index + 64;
+
+	//in case of an error, return 0
+	return 0;
+}

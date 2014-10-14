@@ -78,8 +78,8 @@ int previous_led_status = 0;									//keeps a track if the led was on so as to 
 spinlock_t lock = SPIN_LOCK_UNLOCKED;							//This is a lock declaration in which we lock segments of code which have to be carried out together without any interruptions.
 
 char nums[16] = {0xE7, 0x06, 0xCB, 0x8F, 0x2E, 0xAD, 0xED, 0x86, 0xEF, 0xAE, 0xEE, 0x6D, 0xE1, 0x4F, 0xE9, 0xE8};
-
-
+//				  0	    1     2     3     4     5     6     7     8     9     10    11    12    13    14    15
+  
 /*	THE HELPER FUNCTIONS WHICH ARE USED TO HANDLE SMALL TASKS IN PARSING PACKETS */
 void process_rcvd_pckt0(unsigned a, unsigned b, unsigned c);	//will check 1st packet received from TUX, parse it, and store in a temp buffer which we can read
 void process_rcvd_pckt1(unsigned a, unsigned b, unsigned c);	//will check 2nd packet received from TUX, parse it, and store in a temp buffer which we can read
@@ -87,82 +87,82 @@ void process_rcvd_pckt1(unsigned a, unsigned b, unsigned c);	//will check 2nd pa
 
 void tuxctl_handle_packet (struct tty_struct* tty, unsigned char* packet)
 {
-    unsigned a, b, c;											//indicate 1st, 2nd, and 3rd bytes of received packets
-	unsigned long irq;											//used in the lock which will lock packet manipulation.
+    unsigned a, b, c;												//indicate 1st, 2nd, and 3rd bytes of received packets
+	unsigned long irq;												//used in the lock which will lock packet manipulation.
 
-	spin_lock_irqsave(&lock, irq);								//we start the lock here which will continue till the end of packet manipulation 
+	spin_lock_irqsave(&lock, irq);									//we start the lock here which will continue till the end of packet manipulation 
 	
-    a = packet[0]; 												//store packet 0 from incoming packet
-    b = packet[1]; 												//store packet 1 from incoming packet
-    c = packet[2];												//store packet 2 from incoming packet
+    a = packet[0]; 													//store packet 0 from incoming packet
+    b = packet[1]; 													//store packet 1 from incoming packet
+    c = packet[2];													//store packet 2 from incoming packet
 
     /*printk("packet : %x %x %x\n", a, b, c); */
 
-    switch(a)													//'a' contains the opcode so we can decide what type of packet it is and
-    {															//accordingly use it. The cases below are those which match 'a'.
+    switch(a)														//'a' contains the opcode so we can decide what type of packet it is and
+    {																//accordingly use it. The cases below are those which match 'a'.
     /*	general cases. this is an extra case	*/
-    	case MTCP_ERROR:										//decides if the packet is erroneous				
-    		error_flag = 1;										//set flag
+    	case MTCP_ERROR:											//decides if the packet is erroneous				
+    		error_flag = 1;											//set flag
     		break;	
 
-/*	general cases. this is an extra case	*/
-    	case MTCP_ACK:											//decides if MTCP successfully completes a command.
-    		ACK_FLAG = 1;										//use it for bioc_on and bioc_off and led_set
+/*	decides if MTCP successfully completes a command  */
+    	case MTCP_ACK:											
+    		ACK_FLAG = 1;											//use it for bioc_on and bioc_off and led_set
     		break;
 
-/*	general cases. this is an extra case	*/
-       	case MTCP_RESET: 										//This basically resets the flags and the packet values.					
-			regular_buffer[0] = (char)MTCP_BIOC_ON;				//Use temp buffer to store the bioc_on value
-			tuxctl_ldisc_put(tty, (char *)regular_buffer, 1);	//sends the bioc value to the tux
+/*	resets the flags and the packet values	*/
+       	case MTCP_RESET: 																
+			regular_buffer[0] = (char)MTCP_BIOC_ON;					//Use temp buffer to store the bioc_on value
+			tuxctl_ldisc_put(tty, (char *)regular_buffer, 1);		
 			tuxctl_ldisc_put(tty, (char *)led_regular_buffer, 6);	//sends the led packet which contains led info as to which is on the last 4 tell which led should go on on the display		
-			reset_flag = 0;											//reset the flags when packet transfer done
+			reset_flag = 0;											
 			ACK_FLAG = 0;											//reset the flags when packet transfer done	
 			break;
        	
     	/*	This case is used for buttons	*/
     	case MTCP_BIOC_EVENT:										//Generated when the Button Interrupt-on-change mode is enabled and a button is either pressed or released.
     	{	
-			button_buffer[0] = b;									//store value for 2nd byte in the buffer dedicated to buttons
+			button_buffer[0] = b;									
 			button_buffer[1] = c;    								//store value for 3rd byte in the buffer dedicated to buttons
 			break;
     	}
 
-       	case MTCP_LEDS_POLL0:
+       	case MTCP_LEDS_POLL0:										//opcode - 010100 | 0 | 0
        	{
        		process_rcvd_pckt0(a, b, c);
        		break;
        	}
-       	case __LEDS_POLL01:
+       	case __LEDS_POLL01:											//opcode - 010100 | 0 | 1
        	{
        		process_rcvd_pckt0(a, b, c);
        		break;
        	}
-       	case __LEDS_POLL02:
+       	case __LEDS_POLL02:											//opcode - 010100 | 1 | 0
        	{
        		process_rcvd_pckt0(a, b, c);
        		break;
        	}
-       	case __LEDS_POLL012:
+       	case __LEDS_POLL012:										//opcode - 010100 | 1 | 1	
        	{
        		process_rcvd_pckt0(a, b, c);
        		break;
        	}
-       	case MTCP_LEDS_POLL1:
+       	case MTCP_LEDS_POLL1:										//opcode - 010101 | 0 | 0
        	{
        		process_rcvd_pckt1(a, b, c);
        		break;
        	}
-       	case __LEDS_POLL11:
+       	case __LEDS_POLL11:											//opcode - 010101 | 0 | 1	
        	{
        		process_rcvd_pckt1(a, b, c);
        		break;
        	}
-       	case __LEDS_POLL12:
+       	case __LEDS_POLL12:											//opcode - 010101 | 1 | 0
        	{
        		process_rcvd_pckt1(a, b, c);
        		break;
        	}
-       	case __LEDS_POLL112:
+       	case __LEDS_POLL112:										//opcode - 010101 | 1 | 1
        	{
        		process_rcvd_pckt1(a, b, c);
        		break;

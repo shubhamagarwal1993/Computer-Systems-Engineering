@@ -90,5 +90,33 @@ extern photo_t* read_photo (const char* fname);
  * (The data are needed until the program terminates, and all data are freed
  * when a program terminates.)
  */
+//_______________________________________________________________________
 
+typedef struct tree_node
+{
+	int net_red;
+	int net_green;
+	int net_blue;
+	int color;
+	int index;
+	int count;
+}tree_node;
+
+//main functions
+
+void build_arrays();
+
+void add_to_levels(unsigned short pixel);
+
+void set_palette(unsigned char palette[192][3]);
+
+unsigned char vga_val(unsigned short pixel);
+
+//helper functions
+
+int index_calc(int level, unsigned char red, unsigned char green, unsigned char blue);
+
+int compare(const void *a, const void *b);
+
+//_______________________________________________________________________
 #endif /* PHOTO_H */
