@@ -63,7 +63,7 @@ static int sanity_check (void);
 
 
 /* a few constants */
-#define TICK_USEC      50000 /* tick length in microseconds          */ 																					//might need for synchronization
+#define TICK_USEC      50000 /* tick length in microseconds          */ 									
 #define STATUS_MSG_LEN 40    /* maximum length of status message     */
 #define MOTION_SPEED   2     /* pixels moved per command             */
 /*********		MAGIC NUMBERS WRITTEN BY ME  ******/
@@ -182,9 +182,9 @@ static char status_msg[STATUS_MSG_LEN + 1] = {'\0'};
  * detection of interrupts so that we can use the TUX 			*
  * and the keyboards together.									*
 ****************************************************************/
-pthread_t clock_display;
+
 //static pthread_t keyboard_thread;
-//static pthread_t button_thread;
+static pthread_t timer_thread;
 
 /* 
  * cancel_status_thread
@@ -217,7 +217,8 @@ game_loop ()
      * Variables used to carry information between event loop ticks; see
      * initialization below for explanations of purpose.
      */
-    struct timeval start_time, tick_time; 								
+    struct timeval start_time, tick_time; 	
+
 
     struct timeval cur_time; 		/* current time (during tick)      */
     cmd_t cmd;               /* command issued by input control */		
@@ -232,7 +233,7 @@ game_loop ()
 	tick_time.tv_sec++;															
 	tick_time.tv_usec -= 1000000;												
     }
-
+    pthread_create (&timer_thread, NULL, display_time_on_tux, &(start_time.tv_sec));
     /* The player has just entered the first room. */
     enter_room = 1;
 
@@ -321,7 +322,7 @@ game_loop ()
 	 * than tick counts for timing, although the real time is rounded
 	 * off to the nearest tick by definition.
 	 */
-	/* (none right now...) */																												//the main function may come here
+	/* (none right now...) */													
 
 	/* 
 	 * Handle synchronous events--in this case, only player commands. 
@@ -329,7 +330,12 @@ game_loop ()
 	 * to be redrawn.
 	 */
 	
+	pthread_mutex_lock(&msg_lock);
+
 	cmd = get_command ();
+
+	pthread_mutex_unlock(&msg_lock);
+
 	switch (cmd) {
 	    case CMD_UP:    move_photo_down ();  break;
 	    case CMD_RIGHT: move_photo_left ();  break;
@@ -504,7 +510,7 @@ init_game ()
     game_info.map_y = 0;
     game_info.x_speed = MOTION_SPEED;
     game_info.y_speed = MOTION_SPEED;
-    pthread_create (&clock_display, NULL, timer, NULL);
+
 }
 
 
