@@ -93,9 +93,9 @@ void tuxctl_handle_packet (struct tty_struct* tty, unsigned char* packet)
 
 	spin_lock_irqsave(&lock, irq);									//we start the lock here which will continue till the end of packet manipulation 
 	
-    a = packet[0]; 													//store packet 0 from incoming packet
-    b = packet[1]; 													//store packet 1 from incoming packet
-    c = packet[2];													//store packet 2 from incoming packet
+    a = packet[0]; 													
+    b = packet[1]; 													//store packet 0,1,2 from incoming packet
+    c = packet[2];													
 
     /*printk("packet : %x %x %x\n", a, b, c); */
 
@@ -187,25 +187,25 @@ void process_rcvd_pckt0(unsigned a, unsigned b, unsigned c)
 {
 	switch(a)
 	{
-		case 0x50:			//modifying b and c to get the entire data we need to store.
+		case 0x50:									//check if both A0 and A1 are 0
 			b = b & 0x7F;
 			c = c & 0x7F;
 			led_regular_buffer[2] = b;
 			led_regular_buffer[3] = c;
 			break;
-		case 0x51:
+		case 0x51:									//check if A0 is 0 and A1 is 1
 			c = c & 0x7F;
 			led_regular_buffer[2] = c;
 			b = b | 0x80;
 			led_regular_buffer[3] = b;
 			break;
-		case 0x52:
+		case 0x52:									//check if A1 is 0 and A0 is 1
 			b = b & 0x7F;
 			led_regular_buffer[2] = b;
 			c = c | 0x80;
 			led_regular_buffer[3] = c;
 			break;
-		case 0x53:
+		case 0x53:									//check if both A0 and A1 are 1
 			c = c | 0x80;
 			led_regular_buffer[2] = c;
 			b = b | 0x80;
@@ -219,28 +219,28 @@ void process_rcvd_pckt1(unsigned a, unsigned b, unsigned c)
 {
 	switch(a)
 	{
-		case 0x54:				//modifying b and c to get the entire data we need to store.
+		case 0x54:									//check if both A0 and A1 are 0
 			b = b & 0x7F;
-			c = c & 0x7F;
+			c = c & 0x7F;							//parse to 1 byte
 			led_regular_buffer[4] = b;
 			led_regular_buffer[5] = c;
 			break;
-		case 0x55:
-			c = c & 0x7F;
+		case 0x55:									//check if A0 is 0 and A1 is 1
+			c = c & 0x7F;							
 			led_regular_buffer[4] = c;
-			b = b | 0x80;
+			b = b | 0x80;							//parse to 1 byte	
 			led_regular_buffer[5] = b;
 			break;
-		case 0x56:
+		case 0x56:									//check if A1 is 0 and A0 is 1
 			b = b & 0x7F;
 			led_regular_buffer[4] = b;
-			c = c | 0x80;
+			c = c | 0x80;							//parse to 1 byte
 			led_regular_buffer[5] = c;
 			break;
-		case 0x57:
+		case 0x57:									//check if both A0 and A1 are 1
 			c = c | 0x80;
 			led_regular_buffer[4] = c;
-			b = b | 0x80;
+			b = b | 0x80;							//parse to 1 byte
 			led_regular_buffer[5] = b;
 			break;
 	}
