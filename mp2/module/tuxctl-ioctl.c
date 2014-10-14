@@ -29,6 +29,7 @@
 #define debug(str, ...) \
 	printk(KERN_DEBUG "%s: " str, __FUNCTION__, ## __VA_ARGS__)
 
+#define led_size_buf 6
 /************************ Protocol Implementation *************************/
 
 /* tuxctl_handle_packet()
@@ -63,7 +64,7 @@ volatile int poll_type = 0; 		//1 would indicate  that the button is polled and 
  * 	and we will use it to our advantage by parsing the incoming packets and storing the 		*
  * 	data in a contiguous form to send instructions back to the TUX again						*
 ************************************************************************************************/
-volatile char led_regular_buffer[6] = {0, 0, 0, 0, 0, 0};		//stores led value which is send to tux to indicate which led should go on
+volatile char led_regular_buffer[led_size_buf] = {0, 0, 0, 0, 0, 0};		//stores led value which is send to tux to indicate which led should go on
 volatile char regular_buffer[2];								//Used as a temporary buffer to parse 2nd(b) and 3rd(c) byte of packets going from TUX to the PC 
 volatile char button_buffer[2];									//stores button values which parses incoming packets from TUX and maps it to what the PC should do
 int previous_led_status = 0;									//keeps a track if the led was on so as to know if that has to be checked or not
@@ -114,7 +115,7 @@ void tuxctl_handle_packet (struct tty_struct* tty, unsigned char* packet)
        	case MTCP_RESET: 																
 			regular_buffer[0] = (char)MTCP_BIOC_ON;					//Use temp buffer to store the bioc_on value
 			tuxctl_ldisc_put(tty, (char *)regular_buffer, 1);		
-			tuxctl_ldisc_put(tty, (char *)led_regular_buffer, 6);	//sends the led packet which contains led info as to which is on the last 4 tell which led should go on on the display		
+			tuxctl_ldisc_put(tty, (char *)led_regular_buffer, led_size_buf);	//sends the led packet which contains led info as to which is on the last 4 tell which led should go on on the display		
 			reset_flag = 0;											
 			ACK_FLAG = 0;											//reset the flags when packet transfer done	
 			break;

@@ -320,7 +320,7 @@ prep_room (const room_t* r)
     photo_t * photo = room_photo(r);
     int i;
     for (i=0; i<192; i++)
-    	write_palette(64+i, (photo->palette[i][0] << 1) & 0x3F, photo->palette[i][1]& 0x3F, (photo->palette[i][2] << 1) & 0x3F);
+    	palette_print(64+i, (photo->palette[i][0] << 1) & 0x3F, photo->palette[i][1]& 0x3F, (photo->palette[i][2] << 1) & 0x3F);
 }
 
 
@@ -610,8 +610,7 @@ insert_values(unsigned short pixel)
 	unsigned char blue = (pixel) & 0x1F;											//blue in first 5, then green in 6 and then red in 5
 
 	/*	Calculating index in second array depending on obtained red,green and blue values 	*/
-	int i2 = ((red >> 3) << 4 | (green >> 4) << 2 | (blue >> 3));;
-	
+	int i2 = ((red >> 3) << 4 | (green >> 4) << 2 | (blue >> 3));
 
 	/*	Getting the red, green and blue color for second level array	*/
 	second_lev[i2].total_red = second_lev[i2].total_red 	+ red;

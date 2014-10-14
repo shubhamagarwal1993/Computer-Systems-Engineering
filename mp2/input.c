@@ -75,6 +75,7 @@
 #define time_limit 60
 #define one_sec 1000000
 #define max_min_tux 99
+#define max_sec_tux 59
 static struct termios tio_orig;
 /* stores original terminal settings */
 
@@ -212,7 +213,7 @@ void *timer(void * arg)
 		seconds = counter % time_limit;							
 		if(minutes > max_min_tux)								//to reset clock to zero when it goes to 99 min and 59 sec
 			minutes = 0;
-		if(seconds > 59)
+		if(seconds > max_sec_tux)
 			seconds = 0;
 		unsigned long buf_time = 0xF4FF0000;			//This call SET_LED so we follow the convention of the received arg
 		if(minutes < 10)
