@@ -244,22 +244,22 @@ void *timer(void * arg)
 	* 	to be redrawn.														*
 	************************************************************************/
 cmd_t
-get_tux_command()
+get_tux_command(cmd_t *pushed)
 {
-	cmd_t pushed = CMD_NONE;								
+									
 	int arg = 0xFFFFFF00;									//since we take active low, we make all 1s to show no button is pressesed  
 		
 	ioctl(fd, TUX_BUTTONS, &arg);							//this ioctl updates the arg to tell which button is kept pressed
 /*	We separate these buttons to basically show which buttons should work when kept pressed */
 	switch (arg)
 	{
-	    case 239: pushed = CMD_UP;							
+	    case 239: *pushed = CMD_UP;							
 	    	break; 								
-	    case 127: pushed = CMD_RIGHT;  						//these buttons work when kept pressed
+	    case 127: *pushed = CMD_RIGHT;  						//these buttons work when kept pressed
 	    	break; 				
-	    case 191: pushed = CMD_DOWN;    
+	    case 191: *pushed = CMD_DOWN;    
 	    	break; 				
-	    case 223: pushed = CMD_LEFT; 						//direction mapped with above comment
+	    case 223: *pushed = CMD_LEFT; 						//direction mapped with above comment
 	    	break;  			
 	    default: 
 	    	break;
@@ -270,19 +270,19 @@ get_tux_command()
 		pushedbutton = arg;
 		switch(arg)
 		{
-			case 253: pushed = CMD_MOVE_LEFT;				
+			case 253: *pushed = CMD_MOVE_LEFT;				
 				break;		
-	    	case 251: pushed = CMD_ENTER;	 				//these buttons only work when presses again and again
+	    	case 251: *pushed = CMD_ENTER;	 				//these buttons only work when presses again and again
 	    		break;		
-	    	case 247: pushed = CMD_MOVE_RIGHT;	
+	    	case 247: *pushed = CMD_MOVE_RIGHT;	
 	    		break;		
-			case 254: pushed = CMD_QUIT; 					//direction mapped with above comment
+			case 254: *pushed = CMD_QUIT; 					//direction mapped with above comment
 				break;		
 			default:
 				break;
 		}
 	}
-return pushed;
+return *pushed;
 }
 
 /* 
@@ -422,7 +422,7 @@ get_command ()
 
 #endif /* USE_TUX_CONTROLLER */
     }
-    pushed = get_tux_command();
+    pushed = get_tux_command(&pushed);
  
     /*
      * Once a direction is pushed, that command remains active

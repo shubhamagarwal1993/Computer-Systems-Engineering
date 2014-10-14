@@ -227,10 +227,10 @@ game_loop ()
     (void)gettimeofday (&start_time, NULL);
 
     /* Calculate the time at which the first event loop tick should occur. */
-    tick_time = start_time;																																	//might need this for synchronization
-    if ((tick_time.tv_usec += TICK_USEC) > 1000000) {																										//might need this for synchronization
-	tick_time.tv_sec++;																																		//might need this for synchronization	
-	tick_time.tv_usec -= 1000000;																															//might need this for synchronization	
+    tick_time = start_time;													
+    if ((tick_time.tv_usec += TICK_USEC) > 1000000) {						
+	tick_time.tv_sec++;															
+	tick_time.tv_usec -= 1000000;												
     }
 
     /* The player has just entered the first room. */

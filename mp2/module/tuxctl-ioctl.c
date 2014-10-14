@@ -258,7 +258,7 @@ void process_rcvd_pckt1(unsigned a, unsigned b, unsigned c)
  * ioctls should return immediately with success if their parameters are      *
  * valid.                                                                     *
  *                                                                            *
- ******************************************************************************/
+ *****************************************************************************/
 int 
 tuxctl_ioctl (struct tty_struct* tty, struct file* file, 
 	      unsigned cmd, unsigned long arg)

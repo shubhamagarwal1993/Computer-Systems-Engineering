@@ -448,7 +448,7 @@ read_photo (const char* fname)
 	return NULL;
     }
 
-    build_arrays();
+    arr_initialize();
 
      /* 
      * Loop over rows from bottom to top.  Note that the file is stored
@@ -474,7 +474,7 @@ read_photo (const char* fname)
 				return NULL;
 		    }
 		    else {
-		    add_to_levels(pixel);
+		    insert_values(pixel);
 			}
 		    /* 
 		     * 16-bit pixel is coded as 5:6:5 RGB (5 bits red, 6 bits green,
@@ -493,7 +493,7 @@ read_photo (const char* fname)
 		}
     }
 
-    set_palette(p->palette);
+    set_plt_values(p->palette);
     fseek(in, 0, SEEK_SET);
    
 
@@ -532,7 +532,7 @@ read_photo (const char* fname)
 	    /*p->img[p->hdr.width * y + x] = (((pixel >> 14) << 4) |
 					    (((pixel >> 9) & 0x3) << 2) |
 					    ((pixel >> 3) & 0x3));*/
-		p->img[p->hdr.width * y + x] = vga_val(pixel);
+		p->img[p->hdr.width * y + x] = calculate_vga(pixel);
 	}
     }
 
@@ -544,11 +544,10 @@ read_photo (const char* fname)
 //______________________________________________________________________
 
 //the two arrays that represent the required octree levels
-static tree_node lv_2[64];
-static tree_node lv_4[4096];
+static node_t second_lev[64];
+static node_t fourth_lev[4096];
 
 /* 
- * build_arrays()
  *   DESCRIPTION: This function is responsible for setting up the 
  *				  arrays representing both the required levels.
  *				  This includes initializing all the array variables.
@@ -558,25 +557,25 @@ static tree_node lv_4[4096];
  *   SIDE EFFECTS: none
  */
 void
-build_arrays()
+arr_initialize()
 {
 	int i = 0;
 	for(i = 0; i < 4096; i++)
 	{		
-		lv_4[i].net_red = 0;
-		lv_4[i].net_green = 0;
-		lv_4[i].net_blue = 0;
-		lv_4[i].color = i;
-		lv_4[i].count = 0;
+		fourth_lev[i].total_red = 0;
+		fourth_lev[i].total_green = 0;
+		fourth_lev[i].total_blue = 0;
+		fourth_lev[i].color = i;
+		fourth_lev[i].count = 0;
 	}
 
 	for(i = 0; i < 64; i++)
 	{
-		lv_2[i].net_red = 0;
-		lv_2[i].net_green = 0;
-		lv_2[i].net_blue = 0;
-		lv_2[i].color = i;
-		lv_2[i].count = 0;
+		second_lev[i].total_red = 0;
+		second_lev[i].total_green = 0;
+		second_lev[i].total_blue = 0;
+		second_lev[i].color = i;
+		second_lev[i].count = 0;
 	}
 }
 
@@ -588,10 +587,10 @@ build_arrays()
  *   INPUTS: the pixel that is to be read 
  *   OUTPUTS: --
  *   RETURN VALUE: none
- *   SIDE EFFECTS: changes the information stored in a cell of the lv_2 and lv_4 arrays.
+ *   SIDE EFFECTS: changes the information stored in a cell of the second_lev and fourth_lev arrays.
  */
 void
-add_to_levels(unsigned short pixel)
+insert_values(unsigned short pixel)
 {
 	//extract r,g and b from pixel's 5:6:5 rgb structure by bit-shifting
 	unsigned char red =	(pixel >> 11) & 0x1F; 
@@ -599,23 +598,23 @@ add_to_levels(unsigned short pixel)
 	unsigned char blue = (pixel) & 0x1F;
 
 	//basis obtained r,g and b values, calculate the cell index for level 2 array
-	int posn2 = ((red >> 3) << 4 | (green >> 4) << 2 | (blue >> 3));;
-	//int posn2 = ((red >> 3) << 4 | (green >> 4) << 2 | (blue >> 3));
+	int i2 = ((red >> 3) << 4 | (green >> 4) << 2 | (blue >> 3));;
+	//int i2 = ((red >> 3) << 4 | (green >> 4) << 2 | (blue >> 3));
 
 	//
-	lv_2[posn2].net_red = lv_2[posn2].net_red 	+ red;
-	lv_2[posn2].net_green = lv_2[posn2].net_green + green;
-	lv_2[posn2].net_blue = lv_2[posn2].net_blue	+ blue;
-	lv_2[posn2].count++;
+	second_lev[i2].total_red = second_lev[i2].total_red 	+ red;
+	second_lev[i2].total_green = second_lev[i2].total_green + green;
+	second_lev[i2].total_blue = second_lev[i2].total_blue	+ blue;
+	second_lev[i2].count++;
 
 	//basis obtained r,g and b values, calculate the cell index for level 4 array
-	int posn4 = ((red >> 1) << 8 | (green >> 2) << 4 | (blue >> 1));
-	//int posn4 = ((red >> 1) << 8 | (green >> 2) << 4 | (blue >> 1));
+	int i4 = ((red >> 1) << 8 | (green >> 2) << 4 | (blue >> 1));
+	//int i4 = ((red >> 1) << 8 | (green >> 2) << 4 | (blue >> 1));
 
-	lv_4[posn4].net_red = lv_4[posn4].net_red 	+ red;
-	lv_4[posn4].net_green = lv_4[posn4].net_green + green;
-	lv_4[posn4].net_blue = lv_4[posn4].net_blue	+ blue;
-	lv_4[posn4].count++;	
+	fourth_lev[i4].total_red = fourth_lev[i4].total_red 	+ red;
+	fourth_lev[i4].total_green = fourth_lev[i4].total_green + green;
+	fourth_lev[i4].total_blue = fourth_lev[i4].total_blue	+ blue;
+	fourth_lev[i4].count++;	
 }
 
 /* 
@@ -650,9 +649,9 @@ index_calc(int level, unsigned char red, unsigned char green, unsigned char blue
  *   RETURN VALUE: int
  *   SIDE EFFECTS: --
  */
-int compare(const void *a, const void *b)
+int sort_cmp(const void *a, const void *b)
 {
-	return ((*(tree_node*)a).count < (*(tree_node*)b).count);
+	return ((*(node_t*)a).count < (*(node_t*)b).count);
 }
 
 /* 
@@ -663,49 +662,49 @@ int compare(const void *a, const void *b)
  *   INPUTS: the current photo's 2D palette 
  *   OUTPUTS: --
  *   RETURN VALUE: none
- *   SIDE EFFECTS: changes the information stored in the photo palette as well as the lv_2 nodes.
+ *   SIDE EFFECTS: changes the information stored in the photo palette as well as the second_lev nodes.
  */
 void
-set_palette(unsigned char palette[192][3])
+set_plt_values(unsigned char palette[192][3])
 {
-	qsort(lv_4, 4096, sizeof(tree_node), compare);
+	qsort(fourth_lev, 4096, sizeof(node_t), sort_cmp);
 
 	//add apt pixel info to the fourth level
 	int i = 64;
 	while(i < 192)
 	{
-		if(lv_4[i - 64].count)
+		if(fourth_lev[i - 64].count)
 		{
-		  palette[i][0] = lv_4[i-64].net_red / lv_4[i-64].count;
-		  palette[i][1] = lv_4[i-64].net_green / lv_4[i-64].count;
-		  palette[i][2] = lv_4[i-64].net_blue / lv_4[i-64].count;
+		  palette[i][0] = fourth_lev[i-64].total_red / fourth_lev[i-64].count;
+		  palette[i][1] = fourth_lev[i-64].total_green / fourth_lev[i-64].count;
+		  palette[i][2] = fourth_lev[i-64].total_blue / fourth_lev[i-64].count;
 		}	
 			
-			unsigned char red 	= lv_4[i - 64].color >> 10 & 0x3;
-			unsigned char green = lv_4[i - 64].color >> 6  & 0x3;
-			unsigned char blue 	= lv_4[i - 64].color >> 2  & 0x3;
-			int posn2 = (red << 4) | (green << 2) | blue;
+			unsigned char red 	= fourth_lev[i - 64].color >> 10 & 0x3;
+			unsigned char green = fourth_lev[i - 64].color >> 6  & 0x3;
+			unsigned char blue 	= fourth_lev[i - 64].color >> 2  & 0x3;
+			int i2 = (red << 4) | (green << 2) | blue;
 
-			lv_2[posn2].net_red 	-= lv_4[i - 64].net_red;
-			lv_2[posn2].net_green 	-= lv_4[i - 64].net_green;
-			lv_2[posn2].net_blue 	-= lv_4[i - 64].net_blue;
-			lv_2[posn2].count 		-= lv_4[i - 64].count;
+			second_lev[i2].total_red 	-= fourth_lev[i - 64].total_red;
+			second_lev[i2].total_green 	-= fourth_lev[i - 64].total_green;
+			second_lev[i2].total_blue 	-= fourth_lev[i - 64].total_blue;
+			second_lev[i2].count 		-= fourth_lev[i - 64].count;
 
-		lv_4[i-64].index = i;
+		fourth_lev[i-64].index = i;
 		i++;
 	}
 
 	i = 0;
 	while(i < 64)
 	{
-		if(lv_2[i].count)
+		if(second_lev[i].count)
 		{
-		  palette[i][0] = lv_2[i].net_red / lv_2[i].count;
-		  palette[i][1] = lv_2[i].net_green / lv_2[i].count;
-		  palette[i][2] = lv_2[i].net_blue / lv_2[i].count;
+		  palette[i][0] = second_lev[i].total_red / second_lev[i].count;
+		  palette[i][1] = second_lev[i].total_green / second_lev[i].count;
+		  palette[i][2] = second_lev[i].total_blue / second_lev[i].count;
 		}
 		
-		lv_2[i].index = i;
+		second_lev[i].index = i;
 		i++;
 	}
 
@@ -723,7 +722,7 @@ set_palette(unsigned char palette[192][3])
  *   SIDE EFFECTS: --
  */
 unsigned char
-vga_val(unsigned short pixel)
+calculate_vga(unsigned short pixel)
 {
 	//extract r,g and b from pixel's 5:6:5 rgb structure by bit-shifting 
 	unsigned char red = (pixel >> 11) & 0x1F;
@@ -731,19 +730,19 @@ vga_val(unsigned short pixel)
 	unsigned char blue = pixel & 0x1F;
 
 	//basis the rgb values, calculate the current index
-	int curr_index = ((red >> 1) << 8) | ((green >> 2) << 4) | (blue >> 1);
+	int vga_index = ((red >> 1) << 8) | ((green >> 2) << 4) | (blue >> 1);
 	int i = 0;
 
 	//check if the index was part of the fourth level
 	for(i = 0; i < 128; i++)
 	{
-		if(lv_4[i].color == curr_index)
-			return lv_4[i].index + 64;
+		if(fourth_lev[i].color == vga_index)
+			return fourth_lev[i].index + 64;
 	}
 
-	//if not part of lv_4, index has to be part of lv_2
-	curr_index = ((red >> 3) << 4) | ((green >> 4) << 2) | (blue >> 3);
-	return curr_index + 64;
+	//if not part of fourth_lev, index has to be part of second_lev
+	vga_index = ((red >> 3) << 4) | ((green >> 4) << 2) | (blue >> 3);
+	return vga_index + 64;
 
 	//in case of an error, return 0
 	return 0;
