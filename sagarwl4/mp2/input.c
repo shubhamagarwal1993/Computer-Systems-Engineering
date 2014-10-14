@@ -69,6 +69,12 @@
 /* set to 1 to use tux controller; otherwise, uses keyboard input */
 #define USE_TUX_CONTROLLER 0
 
+/************************
+*	magic numbers		*
+************************/
+#define time_limit 60
+#define one_sec 1000000
+#define max_min_tux 99
 static struct termios tio_orig;
 /* stores original terminal settings */
 
@@ -202,9 +208,9 @@ void *timer(void * arg)
 	
 	while(1)											//start infinite loop so that time not affected
 	{
-		minutes = counter / 60;							//convert time in hex to decimals
-		seconds = counter % 60;							
-		if(minutes > 99)								//to reset clock to zero when it goes to 99 min and 59 sec
+		minutes = counter / time_limit;							//convert time in hex to decimals
+		seconds = counter % time_limit;							
+		if(minutes > max_min_tux)								//to reset clock to zero when it goes to 99 min and 59 sec
 			minutes = 0;
 		if(seconds > 59)
 			seconds = 0;
@@ -215,7 +221,7 @@ void *timer(void * arg)
 		buf_time = buf_time | (seconds & 0x000000FF);		//have final arg value in buffer
 		ioctl (fd, TUX_SET_LED, buf_time);					//this sends to tux to display. 	
 		counter++;										 		
-		usleep(1000*1000);								//this just slows the loop to 1 sec so that the timer increases by 1 sec  
+		usleep(one_sec);								//this just slows the loop to 1 sec so that the timer increases by 1 sec  
 	}													
 }
 
