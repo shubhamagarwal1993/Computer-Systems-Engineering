@@ -543,207 +543,189 @@ read_photo (const char* fname)
 
 //______________________________________________________________________
 
-//the two arrays that represent the required octree levels
-static node_t second_lev[64];
-static node_t fourth_lev[4096];
+/********************************************************************
+*	second_lev and fourth_lev are the two arrays that represent 	*
+*	the required octree levels. 									*
+*																	*
+*																	*
+********************************************************************/
+node_t second_lev[64];					//64 is size of second level  
+node_t fourth_lev[4096];				//4096 is size of second level
 
-/* 
- *   DESCRIPTION: This function is responsible for setting up the 
- *				  arrays representing both the required levels.
- *				  This includes initializing all the array variables.
- *   INPUTS: -- 
- *   OUTPUTS: --
- *   RETURN VALUE: none
- *   SIDE EFFECTS: none
- */
+/******************************************************************** 
+ *  This function sets up the arrays representing the two 			*
+ *	required levels. It also initializes all the elements of the 	*
+ *	arrays to 0 so that we dont have stray elements stored here.	*
+ *																	*
+ *   INPUTS: -- 													*
+ *   OUTPUTS: --													*
+ *   RETURN VALUE: none												*
+ *   																*
+ *******************************************************************/
 void
 arr_initialize()
 {
 	int i = 0;
 	for(i = 0; i < 4096; i++)
 	{		
-		fourth_lev[i].total_red = 0;
+		fourth_lev[i].total_red = 0;								//sum of red, green and blue respectively
 		fourth_lev[i].total_green = 0;
 		fourth_lev[i].total_blue = 0;
-		fourth_lev[i].color = i;
-		fourth_lev[i].count = 0;
+		fourth_lev[i].counter = 0;									//counter for pixels in index range		
+		fourth_lev[i].color = i;									//initializing color as index
 	}
 
 	for(i = 0; i < 64; i++)
 	{
-		second_lev[i].total_red = 0;
-		second_lev[i].total_green = 0;
+		second_lev[i].total_red = 0;					
+		second_lev[i].total_green = 0;								//sum of red, green and blue respectively 
 		second_lev[i].total_blue = 0;
-		second_lev[i].color = i;
-		second_lev[i].count = 0;
+		second_lev[i].counter = 0;									//counter for pixels in index range
+		second_lev[i].color = i;									//initializing color as index
 	}
 }
 
-/* 
- * add_to_levels()
- *   DESCRIPTION: Given a pixel, this function checks the respective significant bits 
- *				  and adds the color of the pixel to the appropriate cells on the level
- *				  two and the level four of the octrees.
- *   INPUTS: the pixel that is to be read 
- *   OUTPUTS: --
- *   RETURN VALUE: none
- *   SIDE EFFECTS: changes the information stored in a cell of the second_lev and fourth_lev arrays.
- */
+/********************************************************************************
+ *																				*
+ *	In this fuctin, we will take a given pixel. We will first check for the 	*
+ *	respective significant bits and adds color of the pixel to the elements of 	*
+ *	both the second level and the fourth level arrays. 							*
+ *	Thus, we will be able to prepare for both the second and the fourth level 	*
+ *	of the octrees.																*
+ *																				*
+ *  INPUTS: the pixel that is to be read 										*
+ *  OUTPUTS: --																	*
+ *  RETURN VALUE: none															*
+ *  SIDE EFFECTS: changes the information stored in a cell 						*
+ *	of the second_lev and fourth_lev arrays.									*
+ *																				*
+ *******************************************************************************/
 void
 insert_values(unsigned short pixel)
 {
-	//extract r,g and b from pixel's 5:6:5 rgb structure by bit-shifting
-	unsigned char red =	(pixel >> 11) & 0x1F; 
-	unsigned char green = (pixel >> 5) & 0x3F;
-	unsigned char blue = (pixel) & 0x1F;
+	/*	We will bit shift to get the red, green and blue colors from each pixel's
+		5:6:5 red/green/blue structure	*/
+	unsigned char red =	(pixel >> 11) & 0x1F;																				 							
+	unsigned char green = (pixel >> 5) & 0x3F;										
+	unsigned char blue = (pixel) & 0x1F;											//blue in first 5, then green in 6 and then red in 5
 
-	//basis obtained r,g and b values, calculate the cell index for level 2 array
+	/*	Calculating index in second array depending on obtained red,green and blue values 	*/
 	int i2 = ((red >> 3) << 4 | (green >> 4) << 2 | (blue >> 3));;
-	//int i2 = ((red >> 3) << 4 | (green >> 4) << 2 | (blue >> 3));
+	
 
-	//
+	/*	Getting the red, green and blue color for second level array	*/
 	second_lev[i2].total_red = second_lev[i2].total_red 	+ red;
 	second_lev[i2].total_green = second_lev[i2].total_green + green;
-	second_lev[i2].total_blue = second_lev[i2].total_blue	+ blue;
-	second_lev[i2].count++;
+	second_lev[i2].total_blue = second_lev[i2].total_blue	+ blue;				
+	second_lev[i2].counter++;															//This basically keeps track of the indices
 
-	//basis obtained r,g and b values, calculate the cell index for level 4 array
+	/*	Calculating index in fourth array depending on obtained red,green and blue values 	*/
 	int i4 = ((red >> 1) << 8 | (green >> 2) << 4 | (blue >> 1));
-	//int i4 = ((red >> 1) << 8 | (green >> 2) << 4 | (blue >> 1));
-
+	
+	/*	Getting the red, green and blue color for fourth level array	*/
 	fourth_lev[i4].total_red = fourth_lev[i4].total_red 	+ red;
 	fourth_lev[i4].total_green = fourth_lev[i4].total_green + green;
 	fourth_lev[i4].total_blue = fourth_lev[i4].total_blue	+ blue;
-	fourth_lev[i4].count++;	
+	fourth_lev[i4].counter++;															//This basically keeps track of the indices
 }
 
-/* 
- * index_calc()
- *   DESCRIPTION: Helper Function. Required by add_to_levels(). 
- *				  Given the depth of the current branch and the RGB values,
- *				  this function determines the appropriate cell index.
- *   INPUTS: the depth level(2||4), and the Red(5 bits), Green (6 bits) and Blue(5 bits) values. 
- *   OUTPUTS: the appropriate cell index.
- *   RETURN VALUE: int
- *   SIDE EFFECTS: --
- */
- /*
-int
-index_calc(int level, unsigned char red, unsigned char green, unsigned char blue)
-{
-	if(level == 2)
-		return 
-
-	else if(level == 4)
-		
-
-	return 0;
-}
-*/
-/* 
- * compare()
- *   DESCRIPTION: Helper Function. Required by qsort(). 
- *				  Simply compares two given tree_node types basis their count parameter.
- *   INPUTS: two pointers to the two tree_node cells that are to be compared 
- *   OUTPUTS: int
- *   RETURN VALUE: int
- *   SIDE EFFECTS: --
- */
 int sort_cmp(const void *a, const void *b)
 {
-	return ((*(node_t*)a).count < (*(node_t*)b).count);
+	return ((*(node_t*)a).counter < (*(node_t*)b).counter);
 }
 
-/* 
- * set_palette()
- *   DESCRIPTION: This function is responsible to actually set up the palette provided
- *				  by photo.c. If a pixel has already been represented by a fourth level node,
- *				  this function also removes its representation from a level two node.
- *   INPUTS: the current photo's 2D palette 
- *   OUTPUTS: --
- *   RETURN VALUE: none
- *   SIDE EFFECTS: changes the information stored in the photo palette as well as the second_lev nodes.
- */
+/************************************************************************************ 
+ * 																					*
+ *  This function sets up the palette which is provided to us by photo.c. 			*	
+ *	A pixel which is stored in thg fourth level has to be removed from the second 	*
+ *	level and that is also done here.												*
+ *																					*
+ *  INPUTS: the current photo's 2D palette 											*
+ *  OUTPUTS: --																		*
+ *  RETURN VALUE: none																*	
+ *  SIDE EFFECTS: changes the information stored in the photo palette 				*
+ * 	as well as the second_lev nodes.												*
+ ***********************************************************************************/
 void
 set_plt_values(unsigned char palette[192][3])
 {
-	qsort(fourth_lev, 4096, sizeof(node_t), sort_cmp);
+	qsort(fourth_lev, 4096, sizeof(node_t), sort_cmp);						//sort the array
 
-	//add apt pixel info to the fourth level
-	int i = 64;
-	while(i < 192)
+	/*	add pixels to the fourth level 	*/
+	int i = 0;
+	while(i < 128)
 	{
-		if(fourth_lev[i - 64].count)
+		if(fourth_lev[i].counter)												//putting the average colors
 		{
-		  palette[i][0] = fourth_lev[i-64].total_red / fourth_lev[i-64].count;
-		  palette[i][1] = fourth_lev[i-64].total_green / fourth_lev[i-64].count;
-		  palette[i][2] = fourth_lev[i-64].total_blue / fourth_lev[i-64].count;
+		  palette[i + 64][0] = fourth_lev[i].total_red / fourth_lev[i].counter;
+		  palette[i + 64][1] = fourth_lev[i].total_green / fourth_lev[i].counter;	
+		  palette[i + 64][2] = fourth_lev[i].total_blue / fourth_lev[i].counter;		//avergae colors for red, green and blue respectively.
 		}	
-			
-			unsigned char red 	= fourth_lev[i - 64].color >> 10 & 0x3;
-			unsigned char green = fourth_lev[i - 64].color >> 6  & 0x3;
-			unsigned char blue 	= fourth_lev[i - 64].color >> 2  & 0x3;
-			int i2 = (red << 4) | (green << 2) | blue;
+		/*	removing contribution of fourth level 	*/
+		unsigned char red 	= fourth_lev[i].color >> 10 & 0x3;				
+		unsigned char green = fourth_lev[i].color >> 6  & 0x3;			//for red, green and blue respectively
+		unsigned char blue 	= fourth_lev[i].color >> 2  & 0x3;
+		int i2 = (red << 4) | (green << 2) | blue;
 
-			second_lev[i2].total_red 	-= fourth_lev[i - 64].total_red;
-			second_lev[i2].total_green 	-= fourth_lev[i - 64].total_green;
-			second_lev[i2].total_blue 	-= fourth_lev[i - 64].total_blue;
-			second_lev[i2].count 		-= fourth_lev[i - 64].count;
+		second_lev[i2].total_red 	-= fourth_lev[i].total_red;			//for red, green and blue respectively
+		second_lev[i2].total_green 	-= fourth_lev[i].total_green;			
+		second_lev[i2].total_blue 	-= fourth_lev[i].total_blue;		//for red, green and blue respectively
+		second_lev[i2].counter 		-= fourth_lev[i].counter;
 
-		fourth_lev[i-64].index = i;
+		fourth_lev[i].index = i + 64;									//updating index
 		i++;
 	}
-
+	/*	add pixels to the second level	*/
 	i = 0;
 	while(i < 64)
 	{
-		if(second_lev[i].count)
+		if(second_lev[i].counter)
 		{
-		  palette[i][0] = second_lev[i].total_red / second_lev[i].count;
-		  palette[i][1] = second_lev[i].total_green / second_lev[i].count;
-		  palette[i][2] = second_lev[i].total_blue / second_lev[i].count;
+		  palette[i][0] = second_lev[i].total_red / second_lev[i].counter;
+		  palette[i][1] = second_lev[i].total_green / second_lev[i].counter;			//for red, green and blue respectively
+		  palette[i][2] = second_lev[i].total_blue / second_lev[i].counter;
 		}
 		
-		second_lev[i].index = i;
+		second_lev[i].index = i;													//updating index
 		i++;
 	}
 
 	return;
 }
 
-/* 
- * vga_val()
- *   DESCRIPTION: Given a pixel, this function calculates the appropriate value the VGA  
- *				  would need to actually print to the screen.
- *				  two and the level four of the octrees.
- *   INPUTS: the pixel that is to be read 
- *   OUTPUTS: the value for the VGA.
- *   RETURN VALUE: unsigned char
- *   SIDE EFFECTS: --
- */
+/******************************************************************************** 	
+ *	This function takes a pixel. It calculates the correct value that the 		*
+ *	VGA will need. These values that the VGA gets are actually printed on the 	*
+ *	screen depending on the second and fourth level arrays.						*
+ *																				*
+ *	INPUTS: the pixel that is to be read 										*
+ *  OUTPUTS: the value for the VGA.												*	
+ *  RETURN VALUE: unsigned char													*	
+ *  SIDE EFFECTS: --															*
+ *******************************************************************************/
 unsigned char
 calculate_vga(unsigned short pixel)
 {
-	//extract r,g and b from pixel's 5:6:5 rgb structure by bit-shifting 
+	/*	We will bit shift to get the red, green and blue colors from each pixel's
+		5:6:5 red/green/blue structure	*/ 
 	unsigned char red = (pixel >> 11) & 0x1F;
-	unsigned char green = (pixel >> 5) & 0x3F;
+	unsigned char green = (pixel >> 5) & 0x3F;	
 	unsigned char blue = pixel & 0x1F;
 
-	//basis the rgb values, calculate the current index
+	/*	Calculating current index based on red, blue and green values 	*/
 	int vga_index = ((red >> 1) << 8) | ((green >> 2) << 4) | (blue >> 1);
 	int i = 0;
 
-	//check if the index was part of the fourth level
+	/*	checking if the color value in fourth level was in the second level as well as mentioned above	*/
 	for(i = 0; i < 128; i++)
 	{
-		if(fourth_lev[i].color == vga_index)
-			return fourth_lev[i].index + 64;
+		if(fourth_lev[i].color == vga_index)								//checking if the index is valid
+			return fourth_lev[i].index + 64;								//if valid then return the index	
 	}
 
-	//if not part of fourth_lev, index has to be part of second_lev
-	vga_index = ((red >> 3) << 4) | ((green >> 4) << 2) | (blue >> 3);
-	return vga_index + 64;
+	/*	If the checking above is done and if color value not in fourth level then it will be in second level	*/
+	vga_index = ((red >> 3) << 4) | ((green >> 4) << 2) | (blue >> 3);		//obtaining second level index
+	return vga_index + 64;													//if valid then return the index
 
-	//in case of an error, return 0
 	return 0;
 }

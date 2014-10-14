@@ -99,23 +99,21 @@ typedef struct node_t
 	int total_blue;
 	int color;
 	int index;
-	int count;
+	int counter;
 }node_t;
 
-//main functions
-
+/**************************
+*	main functions		  *
+**************************/
 void arr_initialize();
-
 void insert_values(unsigned short pixel);
-
 void set_plt_values(unsigned char palette[192][3]);
-
 unsigned char calculate_vga(unsigned short pixel);
 
-//helper functions
-
+/**************************
+*	helper functions		  *
+**************************/
 int index_calc(int level, unsigned char red, unsigned char green, unsigned char blue);
-
 int sort_cmp(const void *a, const void *b);
 
 //_______________________________________________________________________
