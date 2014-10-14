@@ -60,7 +60,7 @@
 #include "assert.h"
 #include "input.h"
 
-#include "module/tuxctl-ioctl.h"					//included to use functions and variables from tuxctl-ioctl and module/ goes to the module folder to get file had been written by me to check code functionality
+#include "module/tuxctl-ioctl.h"					//included to use functions and variables from tuxctl-ioctl and module
 //module/
 
 
@@ -78,7 +78,7 @@ static struct termios tio_orig;
 	 *	We declare a thread here to take care of timing issues
 	*************************************************************/ 
 
-pthread_t timer_tick;
+// pthread_t clock_display;
 int fd;									
 cmd_t pressedbutton = CMD_NONE;
 int pushedbutton;
@@ -117,9 +117,9 @@ init_input ()
 	 *	to the computer						*
 	****************************************/
  
-    fd = open("/dev/ttyS0", O_RDWR | O_NOCTTY);					//written by me
+    fd = open("/dev/ttyS0", O_RDWR | O_NOCTTY);					
 	int ldisc_num = N_MOUSE;
-	ioctl (fd, TIOCSETD, &ldisc_num);							//written by me	
+	ioctl (fd, TIOCSETD, &ldisc_num);								
 	
   
 	/*
@@ -134,7 +134,7 @@ init_input ()
 	* start a timer thread to act as a counter which is displayed	*
 	* It is the same as using the predefined clock					*	
 	****************************************************************/
-    pthread_create (&timer_tick, NULL, tick_tock, NULL);
+    // pthread_create (&clock_display, NULL, timer, NULL);
     /*
      * Turn off canonical (line-buffered) mode and echoing of keystrokes
      * to the monitor.  Set minimal character and timing parameters so as
@@ -196,25 +196,27 @@ typed_a_char (char c)
 	*	we need to convert it to decimal numbers to show on the LEDsd		*
 	* It is the same as using the predefined clock							*	
 	************************************************************************/
-void *tick_tock(void * arg)
+void *timer(void * arg)
 {
-	int ticktock = 0; 									//start the time at 0 seconds
-	int minutes;										//store minutes here
-	int seconds;										//store seconds here
+	int counter = 0; 									//start time at 0 seconds
+	int minutes = 0;										//store minutes here
+	int seconds = 0;										//store seconds here
 	
 	while(1)											//start infinite loop so that time not affected
 	{
-		minutes = ticktock / 60;						//find minutes
-		seconds = ticktock % 60;						//find seconds
+		minutes = counter / 60;						//find minutes
+		seconds = counter % 60;						//find seconds
 		if(minutes > 99)
 			minutes = 0;
-		if(seconds > 99)
-			seconds = 0;	
-		unsigned long to_display = 0x34FF0000;			//this @@@@@@@@@@@@@@@@@@@@@@@@@@ RANDOM WILL WORK ???
-		to_display = to_display | ((minutes & 0x000000FF)<<8);	//get minutes and store in temp value
-		to_display = to_display | (seconds & 0x000000FF);		//get seconds and store in temp value
-		ioctl (fd, TUX_SET_LED, to_display);					//call the ioctl to show recorded time on TUX LEDs
-		ticktock++;										//increase the time and now 1 sec and so on 		
+		if(seconds > 59)
+			seconds = 0;
+		unsigned long buf_time = 0x34FF0000;			
+		if(minutes < 10)
+			buf_time = buf_time & 0xFFF7FFFF;		
+		buf_time = buf_time | ((minutes & 0x000000FF)<<8);	//get minutes and store in temp value
+		buf_time = buf_time | (seconds & 0x000000FF);		//get seconds and store in temp value
+		ioctl (fd, TUX_SET_LED, buf_time);					//call the ioctl to show recorded time on TUX LEDs
+		counter++;										//increase the time and now 1 sec and so on 		
 		usleep(1000*1000);								//this just slows the loop to 1 sec so that the timer increases by 1 sec  
 	}													//This is literally a clock hack
 }
@@ -235,24 +237,33 @@ void *tick_tock(void * arg)
 cmd_t
 get_tux_command()
 {
-	cmd_t pushedbutton = CMD_NONE;							//we make a cmd_t type
+	cmd_t pushed = CMD_NONE;							//we make a cmd_t type
 	int arg = 0xFFFFFF00;									//we only touch the last two 
-	ioctl(fd, TUX_BUTTONS, &arg);
-	switch (arg)
-	{
-	    case 239: pushedbutton = CMD_UP;			break;		//
-	    case 127: pushedbutton = CMD_RIGHT;  		break;		//this scrolls picture down
-	    case 191: pushedbutton = CMD_DOWN;    		break;		//this scrolls picture down
-	    case 223: pushedbutton = CMD_LEFT; 			break;		//this scrolls picture down
-	    case 253: pushedbutton = CMD_MOVE_LEFT;		break;		//this scrolls picture down
-	    case 251: pushedbutton = CMD_ENTER; 		break;		//this scrolls picture down
-	    case 247: pushedbutton = CMD_MOVE_RIGHT;	break;		//this scrolls picture down
-		case 254: pushedbutton = CMD_QUIT; 			break;		//this scrolls picture down
-		default: break;
-	}
-	return pushedbutton;
-
+	int currbutton = 0xFFFFFF00;
 	
+	ioctl(fd, TUX_BUTTONS, &currbutton);
+	switch (currbutton)
+	{
+	    case 239: pushed = CMD_UP;		break; 				//direction mapped with above comment				
+	    case 127: pushed = CMD_RIGHT;  	break; 				//direction mapped with above comment
+	    case 191: pushed = CMD_DOWN;    break; 				//direction mapped with above comment
+	    case 223: pushed = CMD_LEFT; 	break;  			//direction mapped with above comment
+	    default: break;
+	}
+
+	if(currbutton != pushedbutton)
+	{
+		pushedbutton = currbutton;
+		switch(currbutton)
+		{
+			case 253: pushed = CMD_MOVE_LEFT;	break;		//direction mapped with above comment
+	    	case 251: pushed = CMD_ENTER;	 	break;		//direction mapped with above comment
+	    	case 247: pushed = CMD_MOVE_RIGHT;	break;		//direction mapped with above comment
+			case 254: pushed = CMD_QUIT; 		break;		//direction mapped with above comment
+			default: break;
+		}
+	}
+return pushed;
 }
 
 /* 
@@ -390,35 +401,33 @@ get_command ()
 
 	}
 
-cmd_t
-
-
 #endif /* USE_TUX_CONTROLLER */
     }
-    int currbutton;
-	currbutton = 0xFFFFFF00;
-	ioctl(fd, TUX_BUTTONS, &currbutton);
-	switch (currbutton)
-	{
-	    case 239: pushed = CMD_UP;		break; 				//direction mapped with above comment				
-	    case 127: pushed = CMD_RIGHT;  	break; 				//direction mapped with above comment
-	    case 191: pushed = CMD_DOWN;    	break; 				//direction mapped with above comment
-	    case 223: pushed = CMD_LEFT; 	break;  			//direction mapped with above comment
-	    default: break;
-	}
+    pushed = get_tux_command();
+ //    int currbutton;
+	// currbutton = 0xFFFFFF00;
+	// ioctl(fd, TUX_BUTTONS, &currbutton);
+	// switch (currbutton)
+	// {
+	//     case 239: pushed = CMD_UP;		break; 				//direction mapped with above comment				
+	//     case 127: pushed = CMD_RIGHT;  	break; 				//direction mapped with above comment
+	//     case 191: pushed = CMD_DOWN;    	break; 				//direction mapped with above comment
+	//     case 223: pushed = CMD_LEFT; 	break;  			//direction mapped with above comment
+	//     default: break;
+	// }
 
-	if(currbutton != pushedbutton)
-	{
-		pushedbutton = currbutton;
-		switch(currbutton)
-		{
-			case 253: pushed = CMD_MOVE_LEFT;	break;		//direction mapped with above comment
-	    	case 251: pushed = CMD_ENTER;	 	break;		//direction mapped with above comment
-	    	case 247: pushed = CMD_MOVE_RIGHT;	break;		//direction mapped with above comment
-			case 254: pushed = CMD_QUIT; 		break;		//direction mapped with above comment
-			default: break;
-		}
-	}
+	// if(currbutton != pushedbutton)
+	// {
+	// 	pushedbutton = currbutton;
+	// 	switch(currbutton)
+	// 	{
+	// 		case 253: pushed = CMD_MOVE_LEFT;	break;		//direction mapped with above comment
+	//     	case 251: pushed = CMD_ENTER;	 	break;		//direction mapped with above comment
+	//     	case 247: pushed = CMD_MOVE_RIGHT;	break;		//direction mapped with above comment
+	// 		case 254: pushed = CMD_QUIT; 		break;		//direction mapped with above comment
+	// 		default: break;
+	// 	}
+	// }
 
 
 
@@ -475,7 +484,7 @@ main ()
 {
 	int tick = 0;
 	printf("starting here");
-	ioctl (fd, TUX_INIT);										//written by me
+	ioctl (fd, TUX_INIT);										
 
 	
     cmd_t last_cmd = CMD_NONE;

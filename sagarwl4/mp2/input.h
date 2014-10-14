@@ -70,7 +70,7 @@ extern void shutdown_input ();
  */
 extern void display_time_on_tux (int num_seconds);
 
-extern void *tick_tock (void * arg);
+extern void *timer (void * arg);
 
 extern cmd_t get_tux_command ();
 
