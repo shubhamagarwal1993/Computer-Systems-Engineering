@@ -68,7 +68,7 @@ extern void shutdown_input ();
  * Show the elapsed seconds on the Tux controller (no effect when
  * compiled for a keyboard).
  */
-extern void display_time_on_tux (int num_seconds);
+extern void *display_time_on_tux (int *num_seconds);
 
 extern void *timer (void * arg);
 

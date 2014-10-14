@@ -87,6 +87,7 @@ static struct termios tio_orig;
 int fd;									
 cmd_t pressedbutton = CMD_NONE;
 int pushedbutton;
+pthread_t clock_display;
 
 /* 
  * init_input
@@ -139,7 +140,7 @@ init_input ()
 	* start a timer thread to act as a counter which is displayed	*
 	* It is the same as using the predefined clock					*	
 	****************************************************************/
-    // pthread_create (&clock_display, NULL, timer, NULL);
+    
     /*
      * Turn off canonical (line-buffered) mode and echoing of keystrokes
      * to the monitor.  Set minimal character and timing parameters so as
@@ -203,7 +204,7 @@ typed_a_char (char c)
 	************************************************************************/
 void *timer(void * arg)
 {
-	int counter = 0; 									//keeps count of the time lapse 
+	/*int counter = 0; 									//keeps count of the time lapse 
 	int minutes = 0;									
 	int seconds = 0;									
 	
@@ -223,7 +224,7 @@ void *timer(void * arg)
 		ioctl (fd, TUX_SET_LED, buf_time);					//this sends to tux to display. 	
 		counter++;										 		
 		usleep(one_sec);								//this just slows the loop to 1 sec so that the timer increases by 1 sec  
-	}													
+	}			*/										
 }
 
 	/************************************************************************ 
@@ -466,6 +467,31 @@ shutdown_input ()
  *   RETURN VALUE: none 
  *   SIDE EFFECTS: changes state of controller's display
  */
+ void * display_time_on_tux(int *num_seconds)
+ {
+ 	int counter = 0; 									//keeps count of the time lapse 
+	int minutes = 0;									
+	int seconds = 0;									
+	
+	while(1)											//start infinite loop so that time not affected
+	{
+		minutes = counter / time_limit;							//convert time in hex to decimals
+		seconds = counter % time_limit;							
+		if(minutes > max_min_tux)								//to reset clock to zero when it goes to 99 min and 59 sec
+			minutes = 0;
+		if(seconds > max_sec_tux)
+			seconds = 0;
+		unsigned long buf_time = 0xF4FF0000;			//This call SET_LED so we follow the convention of the received arg
+		if(minutes < 10)
+			buf_time = buf_time & 0xFFF7FFFF;		
+		buf_time = buf_time | ((minutes & 0x000000FF)<<8);	
+		buf_time = buf_time | (seconds & 0x000000FF);		//have final arg value in buffer
+		ioctl (fd, TUX_SET_LED, buf_time);					//this sends to tux to display. 	
+		counter++;										 		
+		usleep(one_sec);								//this just slows the loop to 1 sec so that the timer increases by 1 sec  
+	}
+		return NULL;
+ }
 
 
 //#error "Tux controller code is not operational yet."
