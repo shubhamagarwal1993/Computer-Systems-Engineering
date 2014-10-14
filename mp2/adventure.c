@@ -171,7 +171,8 @@ static pthread_t status_thread_id;
 static pthread_mutex_t msg_lock = PTHREAD_MUTEX_INITIALIZER;
 static pthread_cond_t  msg_cv = PTHREAD_COND_INITIALIZER;
 static char status_msg[STATUS_MSG_LEN + 1] = {'\0'};
-																																						//we might have to initialize a thread here
+pthread_t clock_display;
+																													//we might have to initialize a thread here
 
 				////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 /******************	THREADS	*************************************
@@ -504,6 +505,7 @@ init_game ()
     game_info.map_y = 0;
     game_info.x_speed = MOTION_SPEED;
     game_info.y_speed = MOTION_SPEED;
+    pthread_create (&clock_display, NULL, timer, NULL);
 }
 
 

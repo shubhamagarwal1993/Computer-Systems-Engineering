@@ -373,6 +373,7 @@ tuxctl_ioctl (struct tty_struct* tty, struct file* file,
 			temp_buf_convert[1] = convert_sec/10;
 			temp_buf_convert[2] = convert_min%10;
 			temp_buf_convert[3] = convert_min/10;
+
 			for(i=0; i<4; i++)											//this loop stores LEDS values in the last 4 positions and the dp position as well
 			{
 				regular_buf[2+i] = 0;									
@@ -382,6 +383,12 @@ tuxctl_ioctl (struct tty_struct* tty, struct file* file,
 				if((DP_ON>>i) & 0x1)									//decides which dp position
 					regular_buf[2+i] = regular_buf[2+i] | 0x10;
 			}	
+			
+
+			// if(regular_buf[3] == 0)
+			// 	regular_buf[4] = 0x3;
+			// else
+			// 	regular_buf[4] = 0xF; 
 			
 			tuxctl_ldisc_put(tty, regular_buf, 6);						//writes the buffer to the TUX to display the final values that have been stored in regular_buf[6] 
 
