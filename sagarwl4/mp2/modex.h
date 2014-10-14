@@ -139,6 +139,6 @@ extern int draw_vert_line (int x);
 // HELPER FUNCTION WRITTEN BY ME
 extern void print_status_bar(unsigned char * buf);
 
-void write_palette(unsigned int idx, unsigned char red, unsigned char green, unsigned char blue);
+void palette_print(unsigned int i, unsigned char red, unsigned char green, unsigned char blue);
 
 #endif /* MODEX_H */

@@ -1067,11 +1067,11 @@ copy_image (unsigned char* img, unsigned short scr_addr)
 }
 
 void
-write_palette(unsigned int idx, unsigned char red, unsigned char green, unsigned char blue)
+palette_print(unsigned int i, unsigned char red, unsigned char green, unsigned char blue)
 {
-    if (idx<0 || idx>255)
+    if (i<0 || i>255)
       return;
-    OUTB(0x03C8, idx);
+    OUTB(0x03C8, i);
     OUTB(0x03C9, red);
     OUTB(0x03C9, green);
     OUTB(0x03C9, blue);
